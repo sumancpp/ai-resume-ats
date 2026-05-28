@@ -20,7 +20,7 @@ const CandidateDetails = () => {
     const resume = location.state
 
     const pdfUrl =
-        `http://localhost:5000/${resume.filePath}`
+        `https://ai-resume-ats-zbbn.onrender.com/${resume.filePath}`
 
     return (
 

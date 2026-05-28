@@ -31,7 +31,7 @@ const Dashboard = () => {
 
             const response =
                 await axios.get(
-                    "http://localhost:5000/search?query="
+                    "https://ai-resume-ats-zbbn.onrender.com?query="
                 )
 
             setResumes(response.data.resumes)

@@ -22,7 +22,7 @@ const UploadResume = () => {
             formData.append("resume", file)
 
             const response = await axios.post(
-                "http://localhost:5000/upload",
+                "https://ai-resume-ats-zbbn.onrender.com/upload",
                 formData
             )
 
