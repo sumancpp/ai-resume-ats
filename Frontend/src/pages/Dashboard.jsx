@@ -31,14 +31,20 @@ const Dashboard = () => {
 
             const response =
                 await axios.get(
-                    "https://ai-resume-ats-zbbn.onrender.com?query="
+                    `${import.meta.env.VITE_API_URL}/search?query=`
                 )
 
-            setResumes(response.data.resumes)
+            console.log(response.data)
+
+            setResumes(
+                response?.data?.resumes || []
+            )
 
         } catch (error) {
 
             console.log(error)
+
+            setResumes([])
         }
     }
 
@@ -47,18 +53,18 @@ const Dashboard = () => {
     // =====================
 
     const totalResumes =
-        resumes.length
+        resumes?.length || 0
 
     // =====================
     // AVERAGE CGPA
     // =====================
 
     const averageCgpa =
-        resumes.length > 0
+        resumes?.length > 0
             ? (
                 resumes.reduce(
                     (acc, curr) =>
-                        acc + (curr.cgpa || 0),
+                        acc + (curr?.cgpa || 0),
                     0
                 ) / resumes.length
             ).toFixed(2)
@@ -70,7 +76,9 @@ const Dashboard = () => {
 
     const uniqueColleges =
         new Set(
-            resumes.map(r => r.college)
+            resumes
+                ?.filter(r => r?.college)
+                ?.map(r => r.college)
         ).size
 
     // =====================
@@ -79,19 +87,22 @@ const Dashboard = () => {
 
     const skillCount = {}
 
-    resumes.forEach((resume) => {
+    resumes?.forEach((resume) => {
 
-        resume.skills.forEach((skill) => {
+        if (resume?.skills?.length > 0) {
 
-            if (skillCount[skill]) {
+            resume.skills.forEach((skill) => {
 
-                skillCount[skill] += 1
+                if (skillCount[skill]) {
 
-            } else {
+                    skillCount[skill] += 1
 
-                skillCount[skill] = 1
-            }
-        })
+                } else {
+
+                    skillCount[skill] = 1
+                }
+            })
+        }
     })
 
     const chartData =
@@ -105,23 +116,23 @@ const Dashboard = () => {
 
     return (
 
-        <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-4 md:p-8">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-4 md:p-8 overflow-x-hidden">
 
             <div className="max-w-7xl mx-auto">
 
                 {/* HEADER */}
 
-                <div className="flex flex-col md:flex-row items-center justify-between gap-5 mb-10">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-5 mb-10">
 
                     <div>
 
-                        <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        <h1 className="text-3xl sm:text-4xl md:text-6xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent leading-tight">
 
                             ATS Analytics Dashboard
 
                         </h1>
 
-                        <p className="text-gray-600 mt-3 text-lg">
+                        <p className="text-gray-600 mt-3 text-base md:text-lg">
 
                             Smart insights from your AI Resume ATS
 
@@ -242,7 +253,7 @@ const Dashboard = () => {
 
                 </div>
 
-                {/* CHART SECTION */}
+                {/* CHART */}
 
                 <div className="bg-white/70 backdrop-blur-lg border border-white/30 rounded-3xl p-4 md:p-8 shadow-2xl hover:shadow-purple-300/40 transition duration-500">
 
@@ -250,13 +261,13 @@ const Dashboard = () => {
 
                         <div>
 
-                            <h2 className="text-3xl md:text-4xl font-black text-gray-800">
+                            <h2 className="text-2xl md:text-4xl font-black text-gray-800">
 
                                 Top Skills Analytics
 
                             </h2>
 
-                            <p className="text-gray-500 mt-2">
+                            <p className="text-gray-500 mt-2 text-sm md:text-base">
 
                                 Most popular skills from uploaded resumes
 
@@ -272,37 +283,57 @@ const Dashboard = () => {
 
                     </div>
 
-                    <div className="w-full h-[400px] md:h-[500px]">
+                    {
+                        chartData.length > 0
+                            ? (
 
-                        <ResponsiveContainer
-                            width="100%"
-                            height="100%"
-                        >
+                                <div className="w-full h-[350px] md:h-[500px]">
 
-                            <BarChart data={chartData}>
+                                    <ResponsiveContainer
+                                        width="100%"
+                                        height="100%"
+                                    >
 
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                />
+                                        <BarChart data={chartData}>
 
-                                <XAxis
-                                    dataKey="skill"
-                                />
+                                            <CartesianGrid
+                                                strokeDasharray="3 3"
+                                            />
 
-                                <YAxis />
+                                            <XAxis
+                                                dataKey="skill"
+                                            />
 
-                                <Tooltip />
+                                            <YAxis />
 
-                                <Bar
-                                    dataKey="count"
-                                    radius={[10, 10, 0, 0]}
-                                />
+                                            <Tooltip />
 
-                            </BarChart>
+                                            <Bar
+                                                dataKey="count"
+                                                radius={[10, 10, 0, 0]}
+                                            />
 
-                        </ResponsiveContainer>
+                                        </BarChart>
 
-                    </div>
+                                    </ResponsiveContainer>
+
+                                </div>
+
+                            )
+                            : (
+
+                                <div className="flex items-center justify-center h-[300px]">
+
+                                    <p className="text-2xl font-bold text-gray-500">
+
+                                        No Analytics Data Available
+
+                                    </p>
+
+                                </div>
+
+                            )
+                    }
 
                 </div>
 
