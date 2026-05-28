@@ -38,7 +38,7 @@ const SearchResume = () => {
             }
 
             const response = await axios.post(
-                "http://localhost:5000/upload",
+                "https://ai-resume-ats-zbbn.onrender.com/upload",
                 formData
             )
 
@@ -77,7 +77,7 @@ const SearchResume = () => {
             setLoading(true)
 
             const response = await axios.get(
-                "http://localhost:5000/ai-search",
+                "https://ai-resume-ats-zbbn.onrender.com/ai-search",
                 {
                     params: {
                         query
