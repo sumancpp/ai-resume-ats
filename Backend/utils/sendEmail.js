@@ -1,19 +1,28 @@
 import nodemailer from "nodemailer"
 
 const sendEmail = async ({ to, subject, html, text }) => {
-    // If EMAIL_USER and EMAIL_PASS are configured in .env, send real email via Nodemailer
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         try {
+            // Clean App Password by removing spaces
+            const emailUser = process.env.EMAIL_USER.trim()
+            const emailPass = process.env.EMAIL_PASS.replace(/\s+/g, "")
+
+            // Explicit SSL port 465 (bypasses ISP STARTTLS port 587 blocks & timeouts)
             const transporter = nodemailer.createTransport({
-                service: process.env.EMAIL_SERVICE || "gmail",
+                host: "smtp.gmail.com",
+                port: 465,
+                secure: true, // SSL
                 auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS
-                }
+                    user: emailUser,
+                    pass: emailPass
+                },
+                connectionTimeout: 15000,
+                greetingTimeout: 10000,
+                socketTimeout: 15000
             })
 
             const mailOptions = {
-                from: `"TalentAI Security" <${process.env.EMAIL_USER}>`,
+                from: `"TalentAI Security" <${emailUser}>`,
                 to,
                 subject,
                 text,
