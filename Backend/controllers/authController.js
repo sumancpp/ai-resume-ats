@@ -238,9 +238,9 @@ export const forgotPassword = async (req, res) => {
 
         const user = await User.findOne({ email: email.toLowerCase() })
         if (!user) {
-            return res.status(404).json({
+            return res.status(400).json({
                 success: false,
-                message: "No account found with that email address"
+                message: "No account found with that email address. Please check your email or sign up first."
             })
         }
 
