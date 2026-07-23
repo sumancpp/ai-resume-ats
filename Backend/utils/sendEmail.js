@@ -1,17 +1,23 @@
 import nodemailer from "nodemailer"
+import dns from "dns"
+
+// Force IPv4 result order to prevent ENETUNREACH errors on IPv6 networks
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder("ipv4first")
+}
 
 const sendEmail = async ({ to, subject, html, text }) => {
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         try {
-            // Clean App Password by removing spaces
             const emailUser = process.env.EMAIL_USER.trim()
             const emailPass = process.env.EMAIL_PASS.replace(/\s+/g, "")
 
-            // Explicit SSL port 465 (bypasses ISP STARTTLS port 587 blocks & timeouts)
+            // Transport using IPv4 (family: 4) over SSL Port 465
             const transporter = nodemailer.createTransport({
                 host: "smtp.gmail.com",
                 port: 465,
-                secure: true, // SSL
+                secure: true,
+                family: 4, // Force IPv4
                 auth: {
                     user: emailUser,
                     pass: emailPass
