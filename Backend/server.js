@@ -15,6 +15,7 @@ import Resume from "./models/Resume.js"
 import skills from "./utils/skills.js"
 import normalizeText from "./helpers/normalizeText.js"
 import { getGeminiModel } from "./ai/gemini.js"
+import authRoutes from "./routes/authRoutes.js"
 
 connectDB()
 
@@ -33,6 +34,13 @@ app.use(cors({
 }))
 
 app.use(express.json())
+
+// =====================
+// AUTH ROUTES
+// =====================
+
+app.use("/api/auth", authRoutes)
+
 
 // =====================
 // STATIC UPLOADS
