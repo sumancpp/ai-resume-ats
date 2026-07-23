@@ -49,10 +49,6 @@ const ForgotPassword = () => {
 
             if (res.data.success) {
                 setSuccessMsg(res.data.message)
-                if (res.data.resetCode) {
-                    setAutoResetCode(res.data.resetCode)
-                    setResetCode(res.data.resetCode)
-                }
                 setStep(2)
             }
         } catch (err) {
@@ -144,11 +140,6 @@ const ForgotPassword = () => {
                             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                             <div>
                                 <p>{successMsg}</p>
-                                {autoResetCode && step === 2 && (
-                                    <p className="mt-1 font-mono text-xs text-amber-300 bg-amber-500/10 px-2 py-1 rounded inline-block">
-                                        Verification Code: <span className="font-bold">{autoResetCode}</span>
-                                    </p>
-                                )}
                             </div>
                         </div>
                     )}

@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { OAuth2Client } from "google-auth-library"
 import User from "../models/User.js"
+import sendEmail from "../utils/sendEmail.js"
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -256,10 +257,31 @@ export const forgotPassword = async (req, res) => {
         user.resetPasswordExpires = Date.now() + 15 * 60 * 1000 // 15 mins expiry
         await user.save()
 
+        // Send Email using Nodemailer / Secure Dispatcher
+        const htmlTemplate = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0f172a; color: #f8fafc; padding: 30px; border-radius: 16px;">
+                <h2 style="color: #6366f1; text-align: center;">TalentAI ATS Password Reset</h2>
+                <p style="font-size: 14px; color: #94a3b8;">Hello ${user.name || "User"},</p>
+                <p style="font-size: 14px; color: #94a3b8;">You requested to reset your password. Use the 6-digit verification code below:</p>
+                <div style="text-align: center; margin: 25px 0;">
+                    <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #38bdf8; background-color: #1e293b; padding: 12px 24px; border-radius: 12px; border: 1px solid #334155;">
+                        ${resetCode}
+                    </span>
+                </div>
+                <p style="font-size: 12px; color: #64748b; text-align: center;">This verification code expires in 15 minutes. If you did not request this, please ignore this email.</p>
+            </div>
+        `
+
+        await sendEmail({
+            to: user.email,
+            subject: "TalentAI Password Reset Code",
+            text: `Your TalentAI Password Reset Code is: ${resetCode} (Expires in 15 minutes)`,
+            html: htmlTemplate
+        })
+
         res.json({
             success: true,
-            message: `Password reset code sent to ${email}`,
-            resetCode
+            message: `Verification code sent to ${email}. Please check your email inbox.`
         })
     } catch (error) {
         console.error("Forgot password error:", error)
