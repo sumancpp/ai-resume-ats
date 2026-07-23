@@ -7,32 +7,30 @@ import {
 import SearchResume from "./components/SearchResume"
 import CandidateDetails from "./pages/CandidateDetails"
 import Dashboard from "./pages/Dashboard"
+import Navbar from "./components/Navbar"
 
 function App() {
-
   return (
-
     <BrowserRouter>
-
-      <Routes>
-
-        <Route
-          path="/"
-          element={<SearchResume />}
-        />
-
-        <Route
-          path="/candidate"
-          element={<CandidateDetails />}
-        />
-
-        <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
-
-      </Routes>
-
+      <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white flex flex-col font-sans">
+        <Navbar />
+        <main className="flex-1">
+          <Routes>
+            <Route
+              path="/"
+              element={<SearchResume />}
+            />
+            <Route
+              path="/candidate"
+              element={<CandidateDetails />}
+            />
+            <Route
+              path="/dashboard"
+              element={<Dashboard />}
+            />
+          </Routes>
+        </main>
+      </div>
     </BrowserRouter>
   )
 }
