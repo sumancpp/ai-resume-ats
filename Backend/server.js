@@ -281,13 +281,35 @@ app.get("/search", protect, async (req, res) => {
 })
 
 // =====================
-// AI SEARCH (USER ISOLATED & GROUNDED)
+// TECH KNOWLEDGE CLUSTERS & DOMAIN MATRIX
+// =====================
+const TECH_CLUSTERS = {
+    python: ["python", "python3", "py", "fastapi", "django", "flask", "pytorch", "tensorflow", "keras", "pandas", "numpy", "scikit-learn", "scikit"],
+    ml: ["machine learning", "ml", "deep learning", "pytorch", "tensorflow", "keras", "pandas", "numpy", "scikit-learn", "nlp", "opencv", "ai", "artificial intelligence", "data science"],
+    frontend: ["react", "reactjs", "react.js", "vue", "vuejs", "angular", "nextjs", "next.js", "html", "css", "javascript", "typescript", "tailwind", "bootstrap", "ui/ux", "frontend"],
+    backend: ["node", "nodejs", "node.js", "express", "expressjs", "express.js", "python", "django", "fastapi", "java", "spring", "springboot", "golang", "go", "php", "laravel", "c#", ".net", "backend"],
+    fullstack: ["full stack", "fullstack", "mern", "mean", "node", "nodejs", "node.js", "express", "expressjs", "mongodb", "react", "reactjs", "nextjs", "vue", "angular"],
+    database: ["mongodb", "postgresql", "postgres", "mysql", "sqlite", "sqlite3", "redis", "sql", "nosql", "database"],
+    devops: ["docker", "kubernetes", "k8s", "aws", "azure", "gcp", "ci/cd", "terraform", "ansible", "linux", "bash", "devops"],
+    cybersecurity: ["cybersecurity", "security", "ethical hacking", "penetration testing", "wireshark", "nmap", "burp suite", "metasploit", "kali linux"]
+}
+
+const STOP_WORDS = new Set([
+    "with", "in", "for", "and", "or", "of", "to", "a", "an", "the",
+    "proficient", "experience", "skills", "developer", "engineer",
+    "working", "knowledge", "strong", "good", "etc", "looking", "candidate",
+    "role", "position", "having", "who", "has", "is", "are", "at", "by", "from"
+])
+
+// =====================
+// AI SEARCH (DOMAIN-INTELLIGENT ATS SEARCH ENGINE)
 // =====================
 app.get("/ai-search", protect, async (req, res) => {
     try {
-        const userQuery = req.query.query?.toLowerCase().trim()
+        const rawUserQuery = req.query.query || ""
+        const userQueryLower = rawUserQuery.toLowerCase().trim()
 
-        if (!userQuery) {
+        if (!userQueryLower) {
             return res.status(400).json({
                 success: false,
                 message: "Search query required"
@@ -306,14 +328,28 @@ app.get("/ai-search", protect, async (req, res) => {
             })
         }
 
+        // Identify which Domain Clusters the query is asking for
+        const targetClusters = []
+        Object.keys(TECH_CLUSTERS).forEach((clusterKey) => {
+            const clusterTerms = TECH_CLUSTERS[clusterKey]
+            const isClusterRequested = clusterTerms.some((term) => userQueryLower.includes(term))
+            if (isClusterRequested) {
+                targetClusters.push(clusterKey)
+            }
+        })
+
+        // Extract raw query words minus Stop Words
+        const rawTokens = userQueryLower.split(/[\s,;&+/]+/)
+        const queryTechKeywords = rawTokens.filter((token) => token.length >= 2 && !STOP_WORDS.has(token))
+
         const scoredResumes = []
-        const queryWords = userQuery.split(" ").filter((word) => word.length >= 2)
 
         for (const resume of userResumes) {
             let score = 0
             let reasons = []
 
-            const searchableText = `
+            const resumeSkillsLower = (resume.skills || []).map((s) => s.toLowerCase())
+            const fullTextLower = `
                 ${resume.name || ""}
                 ${resume.skills.join(" ")}
                 ${resume.college || ""}
@@ -321,51 +357,87 @@ app.get("/ai-search", protect, async (req, res) => {
                 ${resume.summary || ""}
             `.toLowerCase()
 
-            let matchedWords = 0
+            // 1. STRICT DOMAIN CLUSTER GUARD:
+            // If the query asks for specific domains (e.g. Python, ML, Fullstack, Frontend, Cybersecurity),
+            // candidate MUST match at least 1 technology from the requested domain cluster!
+            let domainSatisfied = targetClusters.length === 0
 
-            queryWords.forEach((word) => {
-                if (searchableText.includes(word)) {
-                    matchedWords++
-                    score += 25
-                    reasons.push(`"${word}" matched`)
+            targetClusters.forEach((clusterKey) => {
+                const terms = TECH_CLUSTERS[clusterKey]
+                const candidateHasClusterTech = terms.some((term) => {
+                    return resumeSkillsLower.some((s) => s.includes(term) || term.includes(s)) || fullTextLower.includes(term)
+                })
+
+                if (candidateHasClusterTech) {
+                    domainSatisfied = true
+                    score += 40
+                    reasons.push(`${clusterKey.toUpperCase()} domain alignment`)
                 }
             })
 
-            // Strict filter: Must match at least 1 keyword
-            if (matchedWords === 0) {
+            if (!domainSatisfied) {
+                continue // REJECT CANDIDATE
+            }
+
+            // 2. KEYWORD RELEVANCE SCORING
+            let matchedKeywordsCount = 0
+            queryTechKeywords.forEach((keyword) => {
+                let matchedInSkills = false
+                let matchedInText = false
+
+                resumeSkillsLower.forEach((skill) => {
+                    if (skill.includes(keyword) || keyword.includes(skill)) {
+                        matchedInSkills = true
+                    }
+                })
+
+                if (fullTextLower.includes(keyword)) {
+                    matchedInText = true
+                }
+
+                if (matchedInSkills) {
+                    matchedKeywordsCount++
+                    score += 45
+                    reasons.push(`${keyword.toUpperCase()} skill`)
+                } else if (matchedInText) {
+                    matchedKeywordsCount++
+                    score += 25
+                    reasons.push(`"${keyword}" in resume`)
+                }
+            })
+
+            // Reject if query contains technical terms and candidate matches 0
+            if (queryTechKeywords.length > 0 && matchedKeywordsCount === 0 && targetClusters.length === 0) {
                 continue
             }
 
-            // Skill bonus
-            resume.skills.forEach((skill) => {
-                if (userQuery.includes(skill.toLowerCase())) {
-                    score += 30
-                    reasons.push(`${skill} skill matched`)
+            // 3. EXACT PHRASE BONUSES
+            const exactPhrases = ["full stack", "machine learning", "data science", "rest api", "cloud computing", "ui/ux", "fastapi", "pytorch", "node.js", "express.js", "mongodb"]
+            exactPhrases.forEach((phrase) => {
+                if (userQueryLower.includes(phrase) && fullTextLower.includes(phrase)) {
+                    score += 35
+                    reasons.push(`Exact "${phrase}" match`)
                 }
             })
 
-            // CGPA bonus
-            if (resume.cgpa && resume.cgpa >= 7) {
-                score += 10
-                reasons.push("Good CGPA")
+            // 4. CGPA & EXPERIENCE BONUSES
+            if (resume.cgpa && resume.cgpa >= 8.0) {
+                score += 15
+                reasons.push(`High Academic CGPA (${resume.cgpa})`)
             }
 
-            // Experience bonus
-            if (searchableText.includes("intern")) {
-                score += 10
+            if (userQueryLower.includes("intern") && fullTextLower.includes("intern")) {
+                score += 15
                 reasons.push("Internship experience")
-            }
-            if (searchableText.includes("project")) {
-                score += 5
-                reasons.push("Project experience")
             }
 
             resume.score = score
-            resume.reason = reasons.slice(0, 4).join(", ")
+            resume.reason = Array.from(new Set(reasons)).slice(0, 4).join(" | ")
 
             scoredResumes.push(resume)
         }
 
+        // Sort candidates by match score descending
         scoredResumes.sort((a, b) => b.score - a.score)
 
         res.json({
