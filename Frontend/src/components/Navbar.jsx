@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
-import { Sparkles, Search, BarChart3, Database, ShieldCheck } from "lucide-react"
+import { Sparkles, Search, BarChart3 } from "lucide-react"
 
 const Navbar = () => {
     const location = useLocation()

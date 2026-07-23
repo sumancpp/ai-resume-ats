@@ -7,8 +7,7 @@ import {
     YAxis,
     Tooltip,
     ResponsiveContainer,
-    CartesianGrid,
-    Cell
+    CartesianGrid
 } from "recharts"
 import { useNavigate } from "react-router-dom"
 import {
@@ -23,6 +22,21 @@ import {
     Award
 } from "lucide-react"
 
+// Custom Bar Chart Tooltip
+function CustomTooltip({ active, payload, label }) {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-2xl text-xs space-y-1">
+                <p className="font-bold text-white">{label}</p>
+                <p className="text-indigo-400">
+                    Candidate Count: <span className="font-semibold text-white">{payload[0].value}</span>
+                </p>
+            </div>
+        )
+    }
+    return null
+}
+
 const Dashboard = () => {
     const [resumes, setResumes] = useState([])
     const [loading, setLoading] = useState(true)
@@ -31,22 +45,27 @@ const Dashboard = () => {
     const navigate = useNavigate()
 
     useEffect(() => {
-        fetchResumes()
-    }, [])
+        let isMounted = true
+        const apiUrl = import.meta.env.VITE_API_URL || "https://ai-resume-ats-zbbn.onrender.com"
+        axios.get(`${apiUrl}/search?query=`)
+            .then((response) => {
+                if (isMounted) {
+                    setResumes(response?.data?.resumes || [])
+                    setLoading(false)
+                }
+            })
+            .catch((error) => {
+                console.error("Dashboard fetch error:", error)
+                if (isMounted) {
+                    setResumes([])
+                    setLoading(false)
+                }
+            })
 
-    const fetchResumes = async () => {
-        try {
-            setLoading(true)
-            const apiUrl = import.meta.env.VITE_API_URL || "https://ai-resume-ats-zbbn.onrender.com"
-            const response = await axios.get(`${apiUrl}/search?query=`)
-            setResumes(response?.data?.resumes || [])
-        } catch (error) {
-            console.error("Dashboard fetch error:", error)
-            setResumes([])
-        } finally {
-            setLoading(false)
+        return () => {
+            isMounted = false
         }
-    }
+    }, [])
 
     // =====================
     // COMPUTED METRICS
@@ -96,21 +115,6 @@ const Dashboard = () => {
             r.skills?.some((s) => s.toLowerCase().includes(searchLower))
         )
     })
-
-    // Custom Bar Chart Tooltip
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-2xl text-xs space-y-1">
-                    <p className="font-bold text-white">{label}</p>
-                    <p className="text-indigo-400">
-                        Candidate Count: <span className="font-semibold text-white">{payload[0].value}</span>
-                    </p>
-                </div>
-            )
-        }
-        return null
-    }
 
     return (
         <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 p-4 md:p-8 lg:p-12">

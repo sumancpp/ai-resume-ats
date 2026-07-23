@@ -10,8 +10,6 @@ import {
     X,
     Loader2,
     GraduationCap,
-    Award,
-    ChevronRight,
     ArrowRight,
     SlidersHorizontal,
     Briefcase

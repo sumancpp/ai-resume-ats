@@ -7,15 +7,13 @@ import {
     GraduationCap,
     Award,
     Sparkles,
-    Download,
     ExternalLink,
     FileText,
     ChevronLeft,
     ChevronRight,
     ZoomIn,
     ZoomOut,
-    CheckCircle2,
-    Briefcase
+    CheckCircle2
 } from "lucide-react"
 
 import "react-pdf/dist/Page/AnnotationLayer.css"
