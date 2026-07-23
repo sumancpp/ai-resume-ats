@@ -16,20 +16,17 @@ import skills from "./utils/skills.js"
 import normalizeText from "./helpers/normalizeText.js"
 import { getGeminiModel } from "./ai/gemini.js"
 import authRoutes from "./routes/authRoutes.js"
+import { protect } from "./middleware/authMiddleware.js"
 
 connectDB()
 
 const app = express()
 
 app.use(cors({
-
     origin: [
-
         "http://localhost:5173",
-
         "https://ai-resume-ats-frontend.onrender.com"
     ],
-
     credentials: true
 }))
 
@@ -38,99 +35,56 @@ app.use(express.json())
 // =====================
 // AUTH ROUTES
 // =====================
-
 app.use("/api/auth", authRoutes)
-
 
 // =====================
 // STATIC UPLOADS
 // =====================
-
 app.use("/uploads", express.static("uploads"))
 
 // =====================
 // CLEAN PDF TEXT
 // =====================
-
 const cleanPDFText = (text) => {
-
     return text
-
-        // FIX SPACED CAPITAL WORDS
-        .replace(
-            /(?:\b[A-Z]\s){2,}[A-Z]\b/g,
-            (match) => match.replace(/\s/g, "")
-        )
-
-        // FIX SPACED SMALL WORDS
-        .replace(
-            /(?:\b[a-z]\s){2,}[a-z]\b/g,
-            (match) => match.replace(/\s/g, "")
-        )
-
-        // REMOVE MULTIPLE SPACES
+        .replace(/(?:\b[A-Z]\s){2,}[A-Z]\b/g, (match) => match.replace(/\s/g, ""))
+        .replace(/(?:\b[a-z]\s){2,}[a-z]\b/g, (match) => match.replace(/\s/g, ""))
         .replace(/\s+/g, " ")
-
-        // REMOVE WEIRD CHARACTERS
         .replace(/[^\x20-\x7E]/g, " ")
-
         .trim()
 }
 
 // =====================
 // STORAGE CONFIG
 // =====================
-
 const storage = multer.diskStorage({
-
     destination: (req, file, cb) => {
-
         cb(null, "uploads/")
     },
-
     filename: (req, file, cb) => {
-
-        const uniqueName =
-            Date.now() +
-            path.extname(file.originalname)
-
+        const uniqueName = Date.now() + path.extname(file.originalname)
         cb(null, uniqueName)
     }
 })
 
 // =====================
-// FILE FILTER
+// STRICT FILE FILTER (PDF & DOCX ONLY)
 // =====================
-
 const fileFilter = (req, file, cb) => {
-
     const allowedTypes = [
-
         "application/pdf",
-
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ]
 
-    if (
-        allowedTypes.includes(file.mimetype)
-    ) {
+    const ext = path.extname(file.originalname).toLowerCase()
+    const allowedExts = [".pdf", ".docx"]
 
+    if (allowedTypes.includes(file.mimetype) || allowedExts.includes(ext)) {
         cb(null, true)
-
     } else {
-
-        cb(
-            new Error(
-                "Only PDF and DOCX allowed"
-            ),
-            false
-        )
+        cb(new Error("Invalid file format. Only PDF (.pdf) and Word (.docx) resume documents are allowed."), false)
     }
 }
-
-// =====================
-// MULTER
-// =====================
 
 const upload = multer({
     storage,
@@ -140,202 +94,99 @@ const upload = multer({
 // =====================
 // TEST ROUTE
 // =====================
-
 app.get("/", (req, res) => {
-
-    res.send("Backend Running")
+    res.send("TalentAI ATS Backend Running")
 })
 
 // =====================
-// MULTIPLE RESUME UPLOAD
+// MULTIPLE RESUME UPLOAD (USER ISOLATED)
 // =====================
-
 app.post(
     "/upload",
+    protect,
     upload.array("resumes", 50),
-
     async (req, res) => {
-
         try {
+            if (!req.files || req.files.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "No files uploaded or invalid document types"
+                })
+            }
 
             const uploadedResumes = []
+            let duplicatesSkipped = 0
 
             for (const file of req.files) {
+                // Generate file MD5 hash
+                const fileBuffer = fs.readFileSync(file.path)
+                const fileHash = crypto
+                    .createHash("md5")
+                    .update(fileBuffer)
+                    .digest("hex")
 
-                // =====================
-                // FILE HASH
-                // =====================
-
-                const fileBuffer =
-                    fs.readFileSync(file.path)
-
-                const fileHash =
-                    crypto
-                        .createHash("md5")
-                        .update(fileBuffer)
-                        .digest("hex")
-
-                console.log("FILE HASH:")
-                console.log(fileHash)
-
-                // =====================
-                // CHECK DUPLICATE
-                // =====================
-
-                const existingResume =
-                    await Resume.findOne({
-                        fileHash
-                    })
+                // Per-User Duplicate Check
+                const existingResume = await Resume.findOne({
+                    user: req.user._id,
+                    fileHash
+                })
 
                 if (existingResume) {
-
-                    console.log(
-                        "DUPLICATE RESUME FOUND"
-                    )
-
+                    console.log(`Duplicate resume skipped for user ${req.user._id}: ${file.originalname}`)
+                    duplicatesSkipped++
                     continue
                 }
 
-                // =====================
-                // READ PDF
-                // =====================
+                // Parse PDF / text
+                let text = ""
+                try {
+                    const pdfData = await pdf(fileBuffer)
+                    text = cleanPDFText(pdfData.text)
+                } catch (pdfErr) {
+                    console.error("PDF Parsing error:", pdfErr)
+                    text = cleanPDFText(fileBuffer.toString("utf-8"))
+                }
 
-                const dataBuffer =
-                    fs.readFileSync(file.path)
-
-                const pdfData =
-                    await pdf(dataBuffer)
-
-                let text =
-                    pdfData.text
-
-                // =====================
-                // CLEAN TEXT
-                // =====================
-
-                text =
-                    cleanPDFText(text)
-
-                console.log("CLEANED TEXT:")
-                console.log(text)
-
-                // =====================
-                // EXTRACT SKILLS
-                // =====================
-
+                // Extract Skills
                 const extractedSkills = []
-
                 skills.forEach((skill) => {
-
-                    const normalizedSkill =
-                        skill.toLowerCase()
-
-                    const normalizedText =
-                        text.toLowerCase()
-
-                    if (
-                        normalizedText.includes(
-                            normalizedSkill
-                        )
-                    ) {
-
+                    const normalizedSkill = skill.toLowerCase()
+                    const normalizedText = text.toLowerCase()
+                    if (normalizedText.includes(normalizedSkill)) {
                         extractedSkills.push(skill)
                     }
                 })
 
-                console.log("SKILLS:")
-                console.log(extractedSkills)
-
-                // =====================
-                // EXTRACT CGPA
-                // =====================
-
+                // Extract CGPA
                 let cgpa = null
-
-                const cgpaRegex =
-                    /(?:CGPA|SGPA|Overall\s*CGPA|Overall\s*CGPA\s*till\s*\d+\w*\s*sem)[^0-9]*([0-9]+(?:\.[0-9]+)?)/i
-
-                const cgpaMatch =
-                    text.match(cgpaRegex)
-
+                const cgpaRegex = /(?:CGPA|SGPA|Overall\s*CGPA)[^0-9]*([0-9]+(?:\.[0-9]+)?)/i
+                const cgpaMatch = text.match(cgpaRegex)
                 if (cgpaMatch) {
-
-                    cgpa =
-                        Number(cgpaMatch[1])
+                    cgpa = Number(cgpaMatch[1])
                 }
 
-                console.log("CGPA:")
-                console.log(cgpa)
-
-                // =====================
-                // EXTRACT COLLEGE
-                // =====================
-
+                // Extract College
                 let college = null
-
-                const collegeRegex =
-                    /([A-Za-z\s]+(?:Group of Institutions|University|College|Institute(?: of Technology)?))/i
-
-                const collegeMatch =
-                    text.match(collegeRegex)
-
+                const collegeRegex = /([A-Za-z\s]+(?:Group of Institutions|University|College|Institute(?: of Technology)?))/i
+                const collegeMatch = text.match(collegeRegex)
                 if (collegeMatch) {
-
-                    college =
-                        collegeMatch[1]
-                            .replace(/\s+/g, " ")
-                            .trim()
+                    college = collegeMatch[1].replace(/\s+/g, " ").trim()
                 }
 
-                console.log("COLLEGE:")
-                console.log(college)
-
-                // =====================
-                // EXTRACT NAME
-                // =====================
-
+                // Extract Candidate Name
                 let name = null
-
-                const nameMatch =
-                    text.match(
-                        /^([A-Z\s]{5,40})/
-                    )
-
+                const nameMatch = text.match(/^([A-Z\s]{5,40})/)
                 if (nameMatch) {
-
-                    name =
-                        nameMatch[1]
-                            .replace(/\s+/g, " ")
-                            .trim()
+                    name = nameMatch[1].replace(/\s+/g, " ").trim()
+                }
+                if (!name || name.length < 3) {
+                    name = text.split(" ").slice(0, 2).join(" ")
                 }
 
-                // FALLBACK
-
-                if (
-                    !name ||
-                    name.length < 3
-                ) {
-
-                    name =
-                        text
-                            .split(" ")
-                            .slice(0, 2)
-                            .join(" ")
-                }
-
-                console.log("NAME:")
-                console.log(name)
-
-                // =====================
-                // AI SUMMARY
-                // =====================
-
-                const geminiModel =
-                    getGeminiModel()
-
+                // AI Summary
+                const geminiModel = getGeminiModel()
                 const summaryPrompt = `
 Analyze this resume and generate a short professional summary.
-
 Rules:
 - Maximum 2 lines
 - Mention skills and experience
@@ -344,436 +195,225 @@ Rules:
 Resume:
 ${text}
 `
-
                 let summary = ""
-
                 try {
-
-                    const summaryResult =
-                        await geminiModel.generateContent(
-                            summaryPrompt
-                        )
-
-                    summary =
-                        summaryResult.response
-                            .text()
-                            .trim()
-
+                    const summaryResult = await geminiModel.generateContent(summaryPrompt)
+                    summary = summaryResult.response.text().trim()
                 } catch (aiError) {
-
-                    console.log(
-                        "AI SUMMARY ERROR:"
-                    )
-
-                    console.log(aiError)
-
-                    summary =
-                        "Professional candidate profile."
+                    summary = "Professional candidate profile."
                 }
 
-                // =====================
-                // FINAL DATA
-                // =====================
-
                 const parsedData = {
-
+                    user: req.user._id,
                     name,
-
                     skills: extractedSkills,
-
                     cgpa,
-
                     college,
-
                     summary,
-
                     resumeText: text,
-
                     filePath: file.path,
-
                     fileHash
                 }
 
-                console.log("FINAL DATA:")
-                console.log(parsedData)
-
-                // =====================
-                // SAVE TO DATABASE
-                // =====================
-
-                const savedResume =
-                    await Resume.create(
-                        parsedData
-                    )
-
-                uploadedResumes.push(
-                    savedResume
-                )
+                const savedResume = await Resume.create(parsedData)
+                uploadedResumes.push(savedResume)
             }
 
             res.json({
-
                 success: true,
-
                 count: uploadedResumes.length,
-
-                uploadedResumes
+                duplicatesSkipped,
+                uploadedResumes,
+                message: duplicatesSkipped > 0
+                    ? `Uploaded ${uploadedResumes.length} new resume(s). ${duplicatesSkipped} duplicate file(s) skipped.`
+                    : `Successfully uploaded ${uploadedResumes.length} resume(s).`
             })
-
         } catch (error) {
-
-            console.log(error)
-
+            console.error("Upload error:", error)
             res.status(500).json({
-
                 success: false,
-
-                message: "Upload Error"
+                message: error.message || "Upload Error"
             })
         }
     }
 )
 
 // =====================
-// NORMAL SEARCH
+// NORMAL SEARCH (USER ISOLATED)
 // =====================
+app.get("/search", protect, async (req, res) => {
+    try {
+        const rawQuery = req.query.query || ""
+        const normalizedQuery = normalizeText(rawQuery)
 
-app.get(
-    "/search",
+        const userResumes = await Resume.find({ user: req.user._id })
 
-    async (req, res) => {
-
-        try {
-
-            const rawQuery =
-                req.query.query || ""
-
-            const normalizedQuery =
-                normalizeText(rawQuery)
-
-            const resumes =
-                await Resume.find()
-
-            const filteredResumes =
-                resumes.filter((resume) => {
-
-                    const searchableText =
-                        normalizeText(
-                            `
-                            ${resume.name}
-                            ${resume.college}
-                            ${resume.skills.join(" ")}
-                            ${resume.resumeText}
-                            ${resume.summary}
-                            `
-                        )
-
-                    return searchableText
-                        .includes(
-                            normalizedQuery
-                        )
-                })
-
-            res.json({
-
+        if (userResumes.length === 0) {
+            return res.json({
                 success: true,
-
-                count:
-                    filteredResumes.length,
-
-                resumes:
-                    filteredResumes
-            })
-
-        } catch (error) {
-
-            console.log(error)
-
-            res.status(500).json({
-
-                success: false,
-
-                message:
-                    "Search Error"
+                count: 0,
+                totalUserResumes: 0,
+                resumes: [],
+                message: "No resumes uploaded yet. Please upload candidate resumes first!"
             })
         }
+
+        const filteredResumes = userResumes.filter((resume) => {
+            const searchableText = normalizeText(
+                `${resume.name} ${resume.college} ${resume.skills.join(" ")} ${resume.resumeText} ${resume.summary}`
+            )
+            return searchableText.includes(normalizedQuery)
+        })
+
+        res.json({
+            success: true,
+            count: filteredResumes.length,
+            totalUserResumes: userResumes.length,
+            resumes: filteredResumes
+        })
+    } catch (error) {
+        console.error("Search error:", error)
+        res.status(500).json({
+            success: false,
+            message: "Search Error"
+        })
     }
-)
-
+})
 
 // =====================
-// AI SEARCH (SMART ATS SEARCH)
+// AI SEARCH (USER ISOLATED & GROUNDED)
 // =====================
+app.get("/ai-search", protect, async (req, res) => {
+    try {
+        const userQuery = req.query.query?.toLowerCase().trim()
 
-app.get(
-    "/ai-search",
+        if (!userQuery) {
+            return res.status(400).json({
+                success: false,
+                message: "Search query required"
+            })
+        }
 
-    async (req, res) => {
+        const userResumes = await Resume.find({ user: req.user._id })
 
-        try {
+        if (userResumes.length === 0) {
+            return res.json({
+                success: true,
+                count: 0,
+                totalUserResumes: 0,
+                resumes: [],
+                message: "No resumes uploaded yet. Please upload candidate resumes first!"
+            })
+        }
 
-            const userQuery =
-                req.query.query
-                    ?.toLowerCase()
-                    .trim()
+        const scoredResumes = []
+        const queryWords = userQuery.split(" ").filter((word) => word.length >= 2)
 
-            if (!userQuery) {
+        for (const resume of userResumes) {
+            let score = 0
+            let reasons = []
 
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        message:
-                            "Search query required"
-                    })
-            }
-
-            const resumes =
-                await Resume.find()
-
-            const scoredResumes = []
-
-            // =====================
-            // QUERY WORDS
-            // =====================
-
-            const queryWords =
-                userQuery
-                    .split(" ")
-                    .filter(word => word)
-
-            for (const resume of resumes) {
-
-                let score = 0
-
-                let reasons = []
-
-                // =====================
-                // SEARCHABLE TEXT
-                // =====================
-
-                const searchableText = `
+            const searchableText = `
                 ${resume.name || ""}
                 ${resume.skills.join(" ")}
                 ${resume.college || ""}
                 ${resume.resumeText || ""}
                 ${resume.summary || ""}
-                `
-                    .toLowerCase()
+            `.toLowerCase()
 
-                // =====================
-                // MATCHED WORDS
-                // =====================
+            let matchedWords = 0
 
-                let matchedWords = 0
-
-                queryWords.forEach((word) => {
-
-                    // SKIP SMALL WORDS
-
-                    if (
-                        word.length < 2
-                    ) {
-                        return
-                    }
-
-                    // WORD MATCH
-
-                    if (
-                        searchableText.includes(word)
-                    ) {
-
-                        matchedWords++
-
-                        score += 25
-
-                        reasons.push(
-                            `"${word}" matched`
-                        )
-                    }
-                })
-
-                // =====================
-                // STRICT FILTER
-                // =====================
-
-                if (matchedWords === 0) {
-
-                    continue
+            queryWords.forEach((word) => {
+                if (searchableText.includes(word)) {
+                    matchedWords++
+                    score += 25
+                    reasons.push(`"${word}" matched`)
                 }
+            })
 
-                // =====================
-                // SKILL BONUS
-                // =====================
-
-                resume.skills.forEach((skill) => {
-
-                    if (
-                        userQuery.includes(
-                            skill.toLowerCase()
-                        )
-                    ) {
-
-                        score += 30
-
-                        reasons.push(
-                            `${skill} skill matched`
-                        )
-                    }
-                })
-
-                // =====================
-                // HIGH CGPA BONUS
-                // =====================
-
-                if (
-                    resume.cgpa &&
-                    resume.cgpa >= 7
-                ) {
-
-                    score += 10
-
-                    reasons.push(
-                        "Good CGPA"
-                    )
-                }
-
-                // =====================
-                // INTERNSHIP BONUS
-                // =====================
-
-                if (
-                    searchableText.includes(
-                        "intern"
-                    )
-                ) {
-
-                    score += 10
-
-                    reasons.push(
-                        "Internship experience"
-                    )
-                }
-
-                // =====================
-                // PROJECT BONUS
-                // =====================
-
-                if (
-                    searchableText.includes(
-                        "project"
-                    )
-                ) {
-
-                    score += 5
-
-                    reasons.push(
-                        "Project experience"
-                    )
-                }
-
-                // =====================
-                // EXACT NAME BONUS
-                // =====================
-
-                if (
-                    resume.name &&
-                    userQuery.includes(
-                        resume.name.toLowerCase()
-                    )
-                ) {
-
-                    score += 50
-
-                    reasons.push(
-                        "Exact name matched"
-                    )
-                }
-
-                // =====================
-                // COLLEGE BONUS
-                // =====================
-
-                if (
-                    resume.college &&
-                    userQuery.includes(
-                        resume.college.toLowerCase()
-                    )
-                ) {
-
-                    score += 40
-
-                    reasons.push(
-                        "College matched"
-                    )
-                }
-
-                // =====================
-                // FINAL RESULT
-                // =====================
-
-                resume.score =
-                    score
-
-                resume.reason =
-                    reasons
-                        .slice(0, 4)
-                        .join(", ")
-
-                scoredResumes.push(
-                    resume
-                )
+            // Strict filter: Must match at least 1 keyword
+            if (matchedWords === 0) {
+                continue
             }
 
-            // =====================
-            // SORT RESULTS
-            // =====================
-
-            scoredResumes.sort(
-                (a, b) =>
-                    b.score - a.score
-            )
-
-            res.json({
-
-                success: true,
-
-                count:
-                    scoredResumes.length,
-
-                resumes:
-                    scoredResumes
+            // Skill bonus
+            resume.skills.forEach((skill) => {
+                if (userQuery.includes(skill.toLowerCase())) {
+                    score += 30
+                    reasons.push(`${skill} skill matched`)
+                }
             })
 
-        } catch (error) {
+            // CGPA bonus
+            if (resume.cgpa && resume.cgpa >= 7) {
+                score += 10
+                reasons.push("Good CGPA")
+            }
 
-            console.log(error)
+            // Experience bonus
+            if (searchableText.includes("intern")) {
+                score += 10
+                reasons.push("Internship experience")
+            }
+            if (searchableText.includes("project")) {
+                score += 5
+                reasons.push("Project experience")
+            }
 
-            res.status(500).json({
+            resume.score = score
+            resume.reason = reasons.slice(0, 4).join(", ")
 
-                success: false,
-
-                message:
-                    "AI Search Error"
-            })
+            scoredResumes.push(resume)
         }
+
+        scoredResumes.sort((a, b) => b.score - a.score)
+
+        res.json({
+            success: true,
+            count: scoredResumes.length,
+            totalUserResumes: userResumes.length,
+            resumes: scoredResumes
+        })
+    } catch (error) {
+        console.error("AI search error:", error)
+        res.status(500).json({
+            success: false,
+            message: "AI Search Error"
+        })
     }
-)
+})
 
+// =====================
+// USER DASHBOARD STATS
+// =====================
+app.get("/stats", protect, async (req, res) => {
+    try {
+        const totalResumes = await Resume.countDocuments({ user: req.user._id })
+        const resumes = await Resume.find({ user: req.user._id })
 
+        let totalSkillsCount = 0
+        resumes.forEach((r) => {
+            totalSkillsCount += r.skills?.length || 0
+        })
 
+        res.json({
+            success: true,
+            totalResumes,
+            totalSkillsParsed: totalSkillsCount
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching stats"
+        })
+    }
+})
 
 // =====================
 // START SERVER
 // =====================
-
-const PORT = 5000
+const PORT = process.env.PORT || 5000
 
 app.listen(PORT, () => {
-
-    console.log(
-        `Server running on port ${PORT}`
-    )
+    console.log(`Server running on port ${PORT}`)
 })

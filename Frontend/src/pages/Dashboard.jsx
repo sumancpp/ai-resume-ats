@@ -46,25 +46,42 @@ const Dashboard = () => {
 
     useEffect(() => {
         let isMounted = true
-        const apiUrl = import.meta.env.VITE_API_URL || "https://ai-resume-ats-zbbn.onrender.com"
-        axios.get(`${apiUrl}/search?query=`)
-            .then((response) => {
+        const token = localStorage.getItem("talent_ai_token")
+        const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+        const getApiUrl = (endpoint) => {
+            const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-ats-zbbn.onrender.com")
+            return `${base}${endpoint}`
+        }
+
+        const fetchDashboardData = async () => {
+            try {
+                const url = getApiUrl("/search?query=")
+                let res
+                try {
+                    res = await axios.get(url, { headers })
+                } catch (err) {
+                    if (!err.response) {
+                        res = await axios.get("https://ai-resume-ats-zbbn.onrender.com/search?query=", { headers })
+                    } else {
+                        throw err
+                    }
+                }
                 if (isMounted) {
-                    setResumes(response?.data?.resumes || [])
+                    setResumes(res?.data?.resumes || [])
                     setLoading(false)
                 }
-            })
-            .catch((error) => {
+            } catch (error) {
                 console.error("Dashboard fetch error:", error)
                 if (isMounted) {
                     setResumes([])
                     setLoading(false)
                 }
-            })
-
-        return () => {
-            isMounted = false
+            }
         }
+
+        fetchDashboardData()
+        return () => { isMounted = false }
     }, [])
 
     // =====================
