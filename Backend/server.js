@@ -23,12 +23,19 @@ connectDB()
 const app = express()
 
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "https://ai-resume-ats-frontend.onrender.com"
-    ],
-    credentials: true
+    origin: (origin, callback) => {
+        // Allow requests from localhost, render domains, or no-origin (Postman/Curl)
+        if (!origin || origin.includes("localhost") || origin.includes("onrender.com")) {
+            return callback(null, true)
+        }
+        return callback(null, true)
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
 }))
+
+app.options("*", cors())
 
 app.use(express.json())
 
