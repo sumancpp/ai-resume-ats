@@ -19,9 +19,10 @@ const ForgotPassword = () => {
     const navigate = useNavigate()
 
     const getAuthEndpoint = (path) => {
-        const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost"
-            ? "http://localhost:5000/api/auth"
-            : "https://ai-resume-atsp-backend.onrender.com/api/auth")
+        const rawBase = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost"
+            ? "http://localhost:5000"
+            : "https://ai-resume-atsp-backend.onrender.com")
+        const base = rawBase.endsWith("/api/auth") ? rawBase : `${rawBase.replace(/\/+$/, "")}/api/auth`
         return `${base}${path}`
     }
 
