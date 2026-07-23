@@ -52,8 +52,9 @@ const CandidateDetails = () => {
         )
     }
 
+    const backendBase = import.meta.env.VITE_API_URL || "https://ai-resume-atsp-backend.onrender.com"
     const pdfUrl = resume.filePath
-        ? `https://ai-resume-ats-zbbn.onrender.com/${resume.filePath}`
+        ? `${backendBase}/${resume.filePath}`
         : null
 
     const onDocumentLoadSuccess = ({ numPages }) => {

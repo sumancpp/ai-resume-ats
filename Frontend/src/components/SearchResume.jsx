@@ -33,7 +33,7 @@ const SearchResume = () => {
     const navigate = useNavigate()
 
     const getApiUrl = (endpoint) => {
-        const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-ats-zbbn.onrender.com")
+        const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-atsp-backend.onrender.com")
         return `${base}${endpoint}`
     }
 
@@ -137,7 +137,7 @@ const SearchResume = () => {
                 response = await axios.post(url, formData, { headers })
             } catch (err) {
                 if (!err.response) {
-                    response = await axios.post("https://ai-resume-ats-zbbn.onrender.com/upload", formData, { headers })
+                    response = await axios.post("https://ai-resume-atsp-backend.onrender.com/upload", formData, { headers })
                 } else {
                     throw err
                 }
@@ -195,7 +195,7 @@ const SearchResume = () => {
                 })
             } catch (err) {
                 if (!err.response) {
-                    response = await axios.get("https://ai-resume-ats-zbbn.onrender.com/ai-search", {
+                    response = await axios.get("https://ai-resume-atsp-backend.onrender.com/ai-search", {
                         params: { query },
                         headers
                     })

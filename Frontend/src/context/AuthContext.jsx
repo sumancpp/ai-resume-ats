@@ -11,11 +11,11 @@ const getApiBaseUrl = () => {
     }
     return window.location.hostname === "localhost"
         ? "http://localhost:5000/api/auth"
-        : "https://ai-resume-ats-zbbn.onrender.com/api/auth"
+        : "https://ai-resume-atsp-backend.onrender.com/api/auth"
 }
 
 const API_BASE_URL = getApiBaseUrl()
-const FALLBACK_API_BASE_URL = "https://ai-resume-ats-zbbn.onrender.com/api/auth"
+const FALLBACK_API_BASE_URL = "https://ai-resume-atsp-backend.onrender.com/api/auth"
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)

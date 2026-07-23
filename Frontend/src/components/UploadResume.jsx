@@ -21,8 +21,9 @@ const UploadResume = () => {
 
             formData.append("resume", file)
 
+            const apiUrl = import.meta.env.VITE_API_URL || "https://ai-resume-atsp-backend.onrender.com"
             const response = await axios.post(
-                "https://ai-resume-ats-zbbn.onrender.com/upload",
+                `${apiUrl}/upload`,
                 formData
             )
 

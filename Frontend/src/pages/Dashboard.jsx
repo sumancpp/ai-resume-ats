@@ -50,7 +50,7 @@ const Dashboard = () => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
         const getApiUrl = (endpoint) => {
-            const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-ats-zbbn.onrender.com")
+            const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-atsp-backend.onrender.com")
             return `${base}${endpoint}`
         }
 
@@ -62,7 +62,7 @@ const Dashboard = () => {
                     res = await axios.get(url, { headers })
                 } catch (err) {
                     if (!err.response) {
-                        res = await axios.get("https://ai-resume-ats-zbbn.onrender.com/search?query=", { headers })
+                        res = await axios.get("https://ai-resume-atsp-backend.onrender.com/search?query=", { headers })
                     } else {
                         throw err
                     }

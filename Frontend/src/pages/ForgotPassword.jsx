@@ -19,9 +19,9 @@ const ForgotPassword = () => {
     const navigate = useNavigate()
 
     const getAuthEndpoint = (path) => {
-        const base = window.location.hostname === "localhost"
+        const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost"
             ? "http://localhost:5000/api/auth"
-            : "https://ai-resume-ats-zbbn.onrender.com/api/auth"
+            : "https://ai-resume-atsp-backend.onrender.com/api/auth")
         return `${base}${path}`
     }
 
@@ -41,7 +41,7 @@ const ForgotPassword = () => {
                 res = await axios.post(url, { email })
             } catch (err) {
                 if (!err.response) {
-                    res = await axios.post("https://ai-resume-ats-zbbn.onrender.com/api/auth/forgot-password", { email })
+                    res = await axios.post("https://ai-resume-atsp-backend.onrender.com/api/auth/forgot-password", { email })
                 } else {
                     throw err
                 }
@@ -84,7 +84,7 @@ const ForgotPassword = () => {
                 res = await axios.post(url, { email, resetCode, newPassword })
             } catch (err) {
                 if (!err.response) {
-                    res = await axios.post("https://ai-resume-ats-zbbn.onrender.com/api/auth/reset-password", { email, resetCode, newPassword })
+                    res = await axios.post("https://ai-resume-atsp-backend.onrender.com/api/auth/reset-password", { email, resetCode, newPassword })
                 } else {
                     throw err
                 }
