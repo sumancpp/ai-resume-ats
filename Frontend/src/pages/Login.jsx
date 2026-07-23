@@ -157,7 +157,7 @@ const Login = () => {
                             onError={handleGoogleError}
                             theme="filled_dark"
                             shape="pill"
-                            width="100%"
+                            width="320"
                             text="continue_with"
                         />
                     </div>

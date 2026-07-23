@@ -5,7 +5,17 @@ const AuthContext = createContext()
 
 export const useAuth = () => useContext(AuthContext)
 
-const API_BASE_URL = "http://localhost:5000/api/auth"
+const getApiBaseUrl = () => {
+    if (import.meta.env.VITE_API_URL) {
+        return `${import.meta.env.VITE_API_URL}/api/auth`
+    }
+    return window.location.hostname === "localhost"
+        ? "http://localhost:5000/api/auth"
+        : "https://ai-resume-ats-zbbn.onrender.com/api/auth"
+}
+
+const API_BASE_URL = getApiBaseUrl()
+const FALLBACK_API_BASE_URL = "https://ai-resume-ats-zbbn.onrender.com/api/auth"
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
@@ -33,7 +43,16 @@ export const AuthProvider = ({ children }) => {
                 setUser(response.data.user)
             }
         } catch (err) {
-            console.error("Failed to fetch current user:", err)
+            // If local backend is down, try fallback production backend
+            try {
+                const fbRes = await axios.get(`${FALLBACK_API_BASE_URL}/me`)
+                if (fbRes.data.success) {
+                    setUser(fbRes.data.user)
+                    return
+                }
+            } catch (fbErr) {
+                console.error("Failed to fetch current user:", fbErr)
+            }
             logout()
         } finally {
             setLoading(false)
@@ -50,6 +69,21 @@ export const AuthProvider = ({ children }) => {
                 return { success: true }
             }
         } catch (err) {
+            // Try production fallback backend if local connection refused
+            if (!err.response && API_BASE_URL !== FALLBACK_API_BASE_URL) {
+                try {
+                    const fbRes = await axios.post(`${FALLBACK_API_BASE_URL}/login`, { email, password })
+                    if (fbRes.data.success) {
+                        setToken(fbRes.data.token)
+                        setUser(fbRes.data.user)
+                        return { success: true }
+                    }
+                } catch (fbErr) {
+                    const msg = fbErr.response?.data?.message || "Login failed. Please check credentials or backend connection."
+                    setAuthError(msg)
+                    return { success: false, message: msg }
+                }
+            }
             const msg = err.response?.data?.message || "Login failed. Please check your credentials."
             setAuthError(msg)
             return { success: false, message: msg }
@@ -66,6 +100,20 @@ export const AuthProvider = ({ children }) => {
                 return { success: true }
             }
         } catch (err) {
+            if (!err.response && API_BASE_URL !== FALLBACK_API_BASE_URL) {
+                try {
+                    const fbRes = await axios.post(`${FALLBACK_API_BASE_URL}/signup`, { name, email, password })
+                    if (fbRes.data.success) {
+                        setToken(fbRes.data.token)
+                        setUser(fbRes.data.user)
+                        return { success: true }
+                    }
+                } catch (fbErr) {
+                    const msg = fbErr.response?.data?.message || "Registration failed."
+                    setAuthError(msg)
+                    return { success: false, message: msg }
+                }
+            }
             const msg = err.response?.data?.message || "Registration failed."
             setAuthError(msg)
             return { success: false, message: msg }
@@ -74,11 +122,11 @@ export const AuthProvider = ({ children }) => {
 
     const googleLogin = async (credentialOrUserInfo) => {
         setAuthError("")
-        try {
-            const payload = typeof credentialOrUserInfo === "string" 
-                ? { credential: credentialOrUserInfo } 
-                : { userInfo: credentialOrUserInfo }
+        const payload = typeof credentialOrUserInfo === "string" 
+            ? { credential: credentialOrUserInfo } 
+            : { userInfo: credentialOrUserInfo }
 
+        try {
             const res = await axios.post(`${API_BASE_URL}/google`, payload)
             if (res.data.success) {
                 setToken(res.data.token)
@@ -86,6 +134,20 @@ export const AuthProvider = ({ children }) => {
                 return { success: true }
             }
         } catch (err) {
+            if (!err.response && API_BASE_URL !== FALLBACK_API_BASE_URL) {
+                try {
+                    const fbRes = await axios.post(`${FALLBACK_API_BASE_URL}/google`, payload)
+                    if (fbRes.data.success) {
+                        setToken(fbRes.data.token)
+                        setUser(fbRes.data.user)
+                        return { success: true }
+                    }
+                } catch (fbErr) {
+                    const msg = fbErr.response?.data?.message || "Google authentication failed."
+                    setAuthError(msg)
+                    return { success: false, message: msg }
+                }
+            }
             const msg = err.response?.data?.message || "Google authentication failed."
             setAuthError(msg)
             return { success: false, message: msg }

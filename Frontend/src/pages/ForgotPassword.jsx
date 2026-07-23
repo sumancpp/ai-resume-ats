@@ -18,6 +18,13 @@ const ForgotPassword = () => {
 
     const navigate = useNavigate()
 
+    const getAuthEndpoint = (path) => {
+        const base = window.location.hostname === "localhost"
+            ? "http://localhost:5000/api/auth"
+            : "https://ai-resume-ats-zbbn.onrender.com/api/auth"
+        return `${base}${path}`
+    }
+
     const handleRequestCode = async (e) => {
         e.preventDefault()
         if (!email) {
@@ -28,7 +35,18 @@ const ForgotPassword = () => {
         setErrorMsg("")
         setIsSubmitting(true)
         try {
-            const res = await axios.post("http://localhost:5000/api/auth/forgot-password", { email })
+            const url = getAuthEndpoint("/forgot-password")
+            let res
+            try {
+                res = await axios.post(url, { email })
+            } catch (err) {
+                if (!err.response) {
+                    res = await axios.post("https://ai-resume-ats-zbbn.onrender.com/api/auth/forgot-password", { email })
+                } else {
+                    throw err
+                }
+            }
+
             if (res.data.success) {
                 setSuccessMsg(res.data.message)
                 if (res.data.resetCode) {
@@ -64,11 +82,18 @@ const ForgotPassword = () => {
         setErrorMsg("")
         setIsSubmitting(true)
         try {
-            const res = await axios.post("http://localhost:5000/api/auth/reset-password", {
-                email,
-                resetCode,
-                newPassword
-            })
+            const url = getAuthEndpoint("/reset-password")
+            let res
+            try {
+                res = await axios.post(url, { email, resetCode, newPassword })
+            } catch (err) {
+                if (!err.response) {
+                    res = await axios.post("https://ai-resume-ats-zbbn.onrender.com/api/auth/reset-password", { email, resetCode, newPassword })
+                } else {
+                    throw err
+                }
+            }
+
             if (res.data.success) {
                 setSuccessMsg("Password reset successfully! Redirecting to login...")
                 setTimeout(() => {
