@@ -272,14 +272,15 @@ export const forgotPassword = async (req, res) => {
             </div>
         `
 
-        await sendEmail({
+        // Send Email in background (non-blocking for fast UI response)
+        sendEmail({
             to: user.email,
             subject: "TalentAI Password Reset Code",
             text: `Your TalentAI Password Reset Code is: ${resetCode} (Expires in 15 minutes)`,
             html: htmlTemplate
-        })
+        }).catch((err) => console.error("Background sendEmail error:", err.message))
 
-        res.json({
+        return res.json({
             success: true,
             message: `Verification code sent to ${email}. Please check your email inbox.`
         })
