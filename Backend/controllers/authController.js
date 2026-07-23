@@ -155,7 +155,7 @@ export const googleAuth = async (req, res) => {
                 googleId = payload.sub
             } catch (verifyErr) {
                 console.warn("Google verifyIdToken fallback decoding token:", verifyErr.message)
-                // Fallback: Decode JWT payload directly (for testing/development without audience restriction)
+                // Fallback: Decode JWT payload directly
                 const base64Url = credential.split(".")[1]
                 const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
                 const jsonPayload = decodeURIComponent(
@@ -187,12 +187,10 @@ export const googleAuth = async (req, res) => {
         let user = await User.findOne({ email: email.toLowerCase() })
 
         if (user) {
-            // Update Google ID and avatar if not present
             if (!user.googleId) user.googleId = googleId
             if (!user.avatar && picture) user.avatar = picture
             await user.save()
         } else {
-            // Create user
             user = await User.create({
                 name: name || email.split("@")[0],
                 email: email.toLowerCase(),
@@ -220,6 +218,106 @@ export const googleAuth = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Google authentication failed"
+        })
+    }
+}
+
+// @desc    Send password reset token / code
+// @route   POST /api/auth/forgot-password
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Please enter your registered email address"
+            })
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase() })
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "No account found with that email address"
+            })
+        }
+
+        if (user.authProvider === "google" && !user.password) {
+            return res.status(400).json({
+                success: false,
+                message: "This account uses Google Auth. Please sign in with Google."
+            })
+        }
+
+        // Generate a 6-digit verification code
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString()
+        user.resetPasswordToken = resetCode
+        user.resetPasswordExpires = Date.now() + 15 * 60 * 1000 // 15 mins expiry
+        await user.save()
+
+        res.json({
+            success: true,
+            message: `Password reset code sent to ${email}`,
+            resetCode
+        })
+    } catch (error) {
+        console.error("Forgot password error:", error)
+        res.status(500).json({
+            success: false,
+            message: "Error processing forgot password request"
+        })
+    }
+}
+
+// @desc    Reset user password using token / code
+// @route   POST /api/auth/reset-password
+export const resetPassword = async (req, res) => {
+    try {
+        const { email, resetCode, newPassword } = req.body
+
+        if (!email || !resetCode || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Please fill in all fields"
+            })
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 6 characters long"
+            })
+        }
+
+        const user = await User.findOne({
+            email: email.toLowerCase(),
+            resetPasswordToken: resetCode,
+            resetPasswordExpires: { $gt: Date.now() }
+        })
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired reset code"
+            })
+        }
+
+        const salt = await bcrypt.genSalt(10)
+        user.password = await bcrypt.hash(newPassword, salt)
+        user.resetPasswordToken = undefined
+        user.resetPasswordExpires = undefined
+        await user.save()
+
+        res.json({
+            success: true,
+            message: "Password reset successful! You can now log in with your new password."
+        })
+    } catch (error) {
+        console.error("Reset password error:", error)
+        res.status(500).json({
+            success: false,
+            message: "Error resetting password"
         })
     }
 }

@@ -9,8 +9,10 @@ import CandidateDetails from "./pages/CandidateDetails"
 import Dashboard from "./pages/Dashboard"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
+import ForgotPassword from "./pages/ForgotPassword"
 import Navbar from "./components/Navbar"
 import Footer from "./components/Footer"
+import ProtectedRoute from "./components/ProtectedRoute"
 
 function App() {
   return (
@@ -19,18 +21,33 @@ function App() {
         <Navbar />
         <main className="flex-1">
           <Routes>
+            {/* Protected Routes - Only accessible when logged in */}
             <Route
               path="/"
-              element={<SearchResume />}
+              element={
+                <ProtectedRoute>
+                  <SearchResume />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/candidate"
-              element={<CandidateDetails />}
+              element={
+                <ProtectedRoute>
+                  <CandidateDetails />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/dashboard"
-              element={<Dashboard />}
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
             />
+
+            {/* Public Auth Routes */}
             <Route
               path="/login"
               element={<Login />}
@@ -38,6 +55,10 @@ function App() {
             <Route
               path="/signup"
               element={<Signup />}
+            />
+            <Route
+              path="/forgot-password"
+              element={<ForgotPassword />}
             />
           </Routes>
         </main>
