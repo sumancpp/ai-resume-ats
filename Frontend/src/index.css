@@ -14,6 +14,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Global Cursor Pointer for All Buttons */
+button, [role="button"] {
+  cursor: pointer !important;
+}
+
+button:disabled, [role="button"]:disabled {
+  cursor: not-allowed !important;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
