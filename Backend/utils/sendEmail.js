@@ -57,17 +57,17 @@ const sendEmail = async ({ to, subject, html, text }) => {
                 console.log(`[RESEND HTTPS API SENT] Verification code emailed to ${to} (ID: ${data.id})`)
                 return
             } else {
-                console.warn(`[RESEND API WARNING]: ${data.message || JSON.stringify(data)}`)
+                console.warn(`[RESEND API NOTICE]: ${data.message || JSON.stringify(data)}. Trying next transport method...`)
             }
         } catch (resendErr) {
             console.error(`[RESEND FETCH ERROR]: ${resendErr.message}`)
         }
     }
 
-    // 2. Brevo (Sendinblue) HTTPS API (Port 443 - Never blocked by Render)
+    // 2. Brevo (Sendinblue) HTTPS API (Port 443 - Sends to ANY recipient without domain restriction)
     if (process.env.BREVO_API_KEY) {
         try {
-            const senderEmail = process.env.EMAIL_USER || "security@talentai.com"
+            const senderEmail = process.env.EMAIL_USER || "sumancoder404@gmail.com"
             const response = await fetch("https://api.brevo.com/v3/smtp/email", {
                 method: "POST",
                 headers: {
@@ -83,15 +83,18 @@ const sendEmail = async ({ to, subject, html, text }) => {
                 })
             })
             if (response.ok) {
-                console.log(`[BREVO HTTPS API SENT] Verification code emailed to ${to}`)
+                console.log(`[BREVO HTTPS API SENT] Verification code successfully emailed to ${to}`)
                 return
+            } else {
+                const brevoData = await response.json()
+                console.warn(`[BREVO API NOTICE]: ${brevoData.message || JSON.stringify(brevoData)}`)
             }
         } catch (brevoErr) {
             console.error(`[BREVO FETCH ERROR]: ${brevoErr.message}`)
         }
     }
 
-    // 3. Gmail Nodemailer SMTP (For servers supporting SMTP sockets)
+    // 3. Gmail Nodemailer SMTP (For servers supporting direct SMTP sockets)
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         const emailUser = process.env.EMAIL_USER.trim()
         const mailOptions = {
@@ -129,10 +132,9 @@ const sendEmail = async ({ to, subject, html, text }) => {
         }
     }
 
-    // 4. Fallback Terminal Logging (Guarantees local testing never fails)
+    // 4. Fallback Terminal Logging (Guarantees local testing & unverified domain testing never hangs)
     console.log(`\n======================================================`)
     console.log(`[SECURE SERVER LOG (Fallback)] Code for ${to}: ${text}`)
-    console.log(`NOTE: Render free tier blocks outbound SMTP ports 465/587. Add RESEND_API_KEY to Render for instant 1-second HTTPS email delivery!`)
     console.log(`======================================================\n`)
 }
 
