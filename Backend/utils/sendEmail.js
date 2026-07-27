@@ -37,7 +37,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
     // 1. Resend HTTPS API (Port 443 - Never blocked by Render, Vercel, or Hotspots)
     if (process.env.RESEND_API_KEY) {
         try {
-            const resendFrom = process.env.RESEND_FROM || "TalentAI ATS <onboarding@resend.dev>"
+            const resendFrom = process.env.RESEND_FROM || "TalentAI ATS <noreply@sumann.in>"
             const response = await fetch("https://api.resend.com/emails", {
                 method: "POST",
                 headers: {
