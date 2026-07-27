@@ -7,6 +7,12 @@ const resumeSchema = new mongoose.Schema({
         required: true
     },
 
+    folder: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Folder",
+        default: null
+    },
+
     name: {
         type: String
     },
@@ -25,6 +31,15 @@ const resumeSchema = new mongoose.Schema({
         type: String
     },
 
+    summary: {
+        type: String
+    },
+
+    roleCategory: {
+        type: String,
+        default: "General"
+    },
+
     resumeText: {
         type: String
     },
@@ -40,8 +55,9 @@ const resumeSchema = new mongoose.Schema({
     timestamps: true
 })
 
-// Index for fast per-user duplicate checking
+// Index for fast per-user duplicate & folder checking
 resumeSchema.index({ user: 1, fileHash: 1 })
+resumeSchema.index({ user: 1, folder: 1 })
 
 const Resume = mongoose.model("Resume", resumeSchema)
 

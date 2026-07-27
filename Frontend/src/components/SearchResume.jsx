@@ -2,24 +2,11 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import { useAuth } from "../context/AuthContext"
-import {
-    Upload,
-    Search,
-    FileText,
-    Sparkles,
-    CheckCircle2,
-    X,
-    Loader2,
-    GraduationCap,
-    ArrowRight,
-    SlidersHorizontal,
-    AlertCircle,
-    FileWarning,
-    FolderPlus
-} from "lucide-react"
+import FolderManager from "./FolderManager"
 
 const SearchResume = () => {
     const { token } = useAuth()
+    const [activeFolder, setActiveFolder] = useState("all")
     const [files, setFiles] = useState([])
     const [isDragging, setIsDragging] = useState(false)
     const [query, setQuery] = useState("")
@@ -128,6 +115,9 @@ const SearchResume = () => {
             for (let i = 0; i < files.length; i++) {
                 formData.append("resumes", files[i])
             }
+            if (activeFolder) {
+                formData.append("folderId", activeFolder)
+            }
 
             const url = getApiUrl("/upload")
             const headers = { Authorization: `Bearer ${token}` }
@@ -172,13 +162,15 @@ const SearchResume = () => {
     }
 
     // =====================
-    // SEMANTIC AI SEARCH (USER ISOLATED)
+    // SEMANTIC AI SEARCH (USER & FOLDER ISOLATED)
     // =====================
-    const handleSearch = async () => {
+    const handleSearch = async (overrideFolderId) => {
         if (!query.trim()) {
             alert("Please enter a job requirement or skills query")
             return
         }
+
+        const targetFolder = overrideFolderId !== undefined ? overrideFolderId : activeFolder
 
         try {
             setSearchLoading(true)
@@ -190,13 +182,13 @@ const SearchResume = () => {
             let response
             try {
                 response = await axios.get(url, {
-                    params: { query },
+                    params: { query, folderId: targetFolder },
                     headers
                 })
             } catch (err) {
                 if (!err.response) {
                     response = await axios.get("https://ai-resume-atsp-backend.onrender.com/ai-search", {
-                        params: { query },
+                        params: { query, folderId: targetFolder },
                         headers
                     })
                 } else {
@@ -251,6 +243,17 @@ const SearchResume = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* SECTION 0: FOLDER / JOB ROLE POOL MANAGER */}
+                <FolderManager
+                    activeFolder={activeFolder}
+                    setActiveFolder={setActiveFolder}
+                    onFolderChange={(folderId) => {
+                        if (query.trim()) {
+                            handleSearch(folderId)
+                        }
+                    }}
+                />
 
                 {/* SECTION 1: BULK RESUME UPLOAD AREA */}
                 <div className="bg-slate-900/80 border border-slate-800/90 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
@@ -519,9 +522,9 @@ const SearchResume = () => {
                                                     <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors line-clamp-1">
                                                         {resume.name || "Candidate Profile"}
                                                     </h3>
-                                                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
-                                                        <GraduationCap className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                                        <span className="truncate">{resume.college || "N/A"}</span>
+                                                    <div className="flex items-center space-x-1 text-slate-400 text-xs mt-0.5">
+                                                        <GraduationCap className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                                        <span className="truncate max-w-[140px]">{resume.college || "University Graduate"}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -530,6 +533,20 @@ const SearchResume = () => {
                                             <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold text-sm shadow-inner shrink-0">
                                                 {resume.score ? `${resume.score}` : "N/A"}
                                             </div>
+                                        </div>
+
+                                        {/* FOLDER & ROLE CATEGORY BADGES */}
+                                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                                            {resume.folder?.name && (
+                                                <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[11px] font-semibold flex items-center gap-1">
+                                                    📁 {resume.folder.name}
+                                                </span>
+                                            )}
+                                            {resume.roleCategory && (
+                                                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-semibold">
+                                                    🏷️ {resume.roleCategory}
+                                                </span>
+                                            )}
                                         </div>
 
                                         {/* AI REASON CALLOUT */}

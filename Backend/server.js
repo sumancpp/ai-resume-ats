@@ -11,7 +11,9 @@ import fs from "fs"
 import pdf from "pdf-parse/lib/pdf-parse.js"
 
 import connectDB from "./config/db.js"
+import User from "./models/User.js"
 import Resume from "./models/Resume.js"
+import Folder from "./models/Folder.js"
 import skills from "./utils/skills.js"
 import normalizeText from "./helpers/normalizeText.js"
 import { getGeminiModel } from "./ai/gemini.js"
@@ -24,7 +26,6 @@ const app = express()
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests from localhost, render domains, or no-origin (Postman/Curl)
         if (!origin || origin.includes("localhost") || origin.includes("onrender.com")) {
             return callback(null, true)
         }
@@ -57,6 +58,31 @@ const cleanPDFText = (text) => {
         .replace(/\s+/g, " ")
         .replace(/[^\x20-\x7E]/g, " ")
         .trim()
+}
+
+// =====================
+// AUTO ROLE CATEGORY DETECTOR
+// =====================
+const detectRoleCategory = (skillsArray = [], fullText = "") => {
+    const text = fullText.toLowerCase()
+    const skillsLower = skillsArray.map((s) => s.toLowerCase())
+
+    if (skillsLower.some(s => ["flutter", "react native", "swift", "kotlin", "android", "ios", "mobile"].includes(s)) || text.includes("mobile app") || text.includes("app developer")) {
+        return "Mobile App Development"
+    }
+    if (skillsLower.some(s => ["react", "node.js", "express", "mongodb", "next.js", "vue", "angular", "html", "css", "mern"].includes(s)) || text.includes("full stack") || text.includes("web developer")) {
+        return "Web Development"
+    }
+    if (skillsLower.some(s => ["pytorch", "tensorflow", "scikit-learn", "pandas", "numpy", "machine learning", "deep learning", "nlp", "ai"].includes(s))) {
+        return "Data Science & AI"
+    }
+    if (skillsLower.some(s => ["docker", "kubernetes", "aws", "azure", "gcp", "terraform", "ansible", "ci/cd", "linux"].includes(s))) {
+        return "DevOps & Cloud"
+    }
+    if (skillsLower.some(s => ["cybersecurity", "ethical hacking", "wireshark", "nmap", "burp suite"].includes(s))) {
+        return "Cybersecurity"
+    }
+    return "Software Engineering"
 }
 
 // =====================
@@ -104,7 +130,74 @@ app.get("/", (req, res) => {
 })
 
 // =====================
-// MULTIPLE RESUME UPLOAD (USER ISOLATED)
+// FOLDER / JOB ROLE POOL API
+// =====================
+app.get("/folders", protect, async (req, res) => {
+    try {
+        const folders = await Folder.find({ user: req.user._id }).sort({ createdAt: -1 })
+        
+        const foldersWithCount = await Promise.all(
+            folders.map(async (folder) => {
+                const candidateCount = await Resume.countDocuments({ user: req.user._id, folder: folder._id })
+                return {
+                    ...folder.toObject(),
+                    candidateCount
+                }
+            })
+        )
+
+        const totalResumes = await Resume.countDocuments({ user: req.user._id })
+        const unassignedCount = await Resume.countDocuments({ user: req.user._id, folder: null })
+
+        res.json({
+            success: true,
+            totalResumes,
+            unassignedCount,
+            folders: foldersWithCount
+        })
+    } catch (error) {
+        console.error("Fetch folders error:", error)
+        res.status(500).json({ success: false, message: "Error fetching job folders" })
+    }
+})
+
+app.post("/folders", protect, async (req, res) => {
+    try {
+        const { name, description, color } = req.body
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, message: "Folder name required" })
+        }
+
+        const newFolder = await Folder.create({
+            user: req.user._id,
+            name: name.trim(),
+            description: description?.trim() || "",
+            color: color || "indigo"
+        })
+
+        res.status(201).json({
+            success: true,
+            folder: { ...newFolder.toObject(), candidateCount: 0 }
+        })
+    } catch (error) {
+        console.error("Create folder error:", error)
+        res.status(500).json({ success: false, message: "Error creating job folder" })
+    }
+})
+
+app.delete("/folders/:id", protect, async (req, res) => {
+    try {
+        await Folder.findOneAndDelete({ _id: req.params.id, user: req.user._id })
+        await Resume.updateMany({ user: req.user._id, folder: req.params.id }, { $set: { folder: null } })
+        res.json({ success: true, message: "Job folder deleted successfully" })
+    } catch (error) {
+        console.error("Delete folder error:", error)
+        res.status(500).json({ success: false, message: "Error deleting folder" })
+    }
+})
+
+// =====================
+// MULTIPLE RESUME UPLOAD (WITH FOLDER & ROLE ALLOCATION)
 // =====================
 app.post(
     "/upload",
@@ -118,6 +211,10 @@ app.post(
                     message: "No files uploaded or invalid document types"
                 })
             }
+
+            const targetFolderId = req.body.folderId && req.body.folderId !== "all" && req.body.folderId !== "general"
+                ? req.body.folderId
+                : null
 
             const uploadedResumes = []
             let duplicatesSkipped = 0
@@ -188,6 +285,9 @@ app.post(
                     name = text.split(" ").slice(0, 2).join(" ")
                 }
 
+                // Auto Role Category Detection
+                const roleCategory = detectRoleCategory(extractedSkills, text)
+
                 // AI Summary
                 const geminiModel = getGeminiModel()
                 const summaryPrompt = `
@@ -210,6 +310,8 @@ ${text}
 
                 const parsedData = {
                     user: req.user._id,
+                    folder: targetFolderId,
+                    roleCategory,
                     name,
                     skills: extractedSkills,
                     cgpa,
@@ -244,14 +346,22 @@ ${text}
 )
 
 // =====================
-// NORMAL SEARCH (USER ISOLATED)
+// NORMAL SEARCH (USER & FOLDER ISOLATED)
 // =====================
 app.get("/search", protect, async (req, res) => {
     try {
         const rawQuery = req.query.query || ""
+        const folderId = req.query.folderId
         const normalizedQuery = normalizeText(rawQuery)
 
-        const userResumes = await Resume.find({ user: req.user._id })
+        const filter = { user: req.user._id }
+        if (folderId && folderId !== "all" && folderId !== "general") {
+            filter.folder = folderId
+        } else if (folderId === "general") {
+            filter.folder = null
+        }
+
+        const userResumes = await Resume.find(filter).populate("folder", "name color")
 
         if (userResumes.length === 0) {
             return res.json({
@@ -259,13 +369,13 @@ app.get("/search", protect, async (req, res) => {
                 count: 0,
                 totalUserResumes: 0,
                 resumes: [],
-                message: "No resumes uploaded yet. Please upload candidate resumes first!"
+                message: "No resumes found in this job folder!"
             })
         }
 
         const filteredResumes = userResumes.filter((resume) => {
             const searchableText = normalizeText(
-                `${resume.name} ${resume.college} ${resume.skills.join(" ")} ${resume.resumeText} ${resume.summary}`
+                `${resume.name} ${resume.college} ${resume.skills.join(" ")} ${resume.resumeText} ${resume.summary} ${resume.roleCategory}`
             )
             return searchableText.includes(normalizedQuery)
         })
@@ -307,11 +417,12 @@ const STOP_WORDS = new Set([
 ])
 
 // =====================
-// AI SEARCH (DOMAIN-INTELLIGENT ATS SEARCH ENGINE)
+// AI SEARCH (DOMAIN & FOLDER-INTELLIGENT ATS SEARCH ENGINE)
 // =====================
 app.get("/ai-search", protect, async (req, res) => {
     try {
         const rawUserQuery = req.query.query || ""
+        const folderId = req.query.folderId
         const userQueryLower = rawUserQuery.toLowerCase().trim()
 
         if (!userQueryLower) {
@@ -321,7 +432,14 @@ app.get("/ai-search", protect, async (req, res) => {
             })
         }
 
-        const userResumes = await Resume.find({ user: req.user._id })
+        const filter = { user: req.user._id }
+        if (folderId && folderId !== "all" && folderId !== "general") {
+            filter.folder = folderId
+        } else if (folderId === "general") {
+            filter.folder = null
+        }
+
+        const userResumes = await Resume.find(filter).populate("folder", "name color")
 
         if (userResumes.length === 0) {
             return res.json({
@@ -329,7 +447,7 @@ app.get("/ai-search", protect, async (req, res) => {
                 count: 0,
                 totalUserResumes: 0,
                 resumes: [],
-                message: "No resumes uploaded yet. Please upload candidate resumes first!"
+                message: "No candidate resumes found in this job folder!"
             })
         }
 
@@ -360,11 +478,10 @@ app.get("/ai-search", protect, async (req, res) => {
                 ${resume.college || ""}
                 ${resume.resumeText || ""}
                 ${resume.summary || ""}
+                ${resume.roleCategory || ""}
             `.toLowerCase()
 
-            // 1. STRICT DOMAIN CLUSTER GUARD:
-            // If the query asks for specific domains (e.g. Python, ML, Fullstack, Frontend, Cybersecurity),
-            // candidate MUST match at least 1 technology from the requested domain cluster!
+            // 1. STRICT DOMAIN CLUSTER GUARD
             let domainSatisfied = targetClusters.length === 0
 
             targetClusters.forEach((clusterKey) => {
@@ -411,7 +528,6 @@ app.get("/ai-search", protect, async (req, res) => {
                 }
             })
 
-            // Reject if query contains technical terms and candidate matches 0
             if (queryTechKeywords.length > 0 && matchedKeywordsCount === 0 && targetClusters.length === 0) {
                 continue
             }
@@ -466,6 +582,7 @@ app.get("/ai-search", protect, async (req, res) => {
 app.get("/stats", protect, async (req, res) => {
     try {
         const totalResumes = await Resume.countDocuments({ user: req.user._id })
+        const totalFolders = await Folder.countDocuments({ user: req.user._id })
         const resumes = await Resume.find({ user: req.user._id })
 
         let totalSkillsCount = 0
@@ -476,6 +593,7 @@ app.get("/stats", protect, async (req, res) => {
         res.json({
             success: true,
             totalResumes,
+            totalFolders,
             totalSkillsParsed: totalSkillsCount
         })
     } catch (error) {
