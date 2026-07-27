@@ -539,8 +539,10 @@ app.get("/ai-search", protect, async (req, res) => {
                 }
             })
 
-            if (queryTechKeywords.length > 0 && matchedKeywordsCount === 0 && targetClusters.length === 0) {
-                continue
+            // QUALIFICATION GUARD: Candidate MUST match at least 1 requested keyword or domain cluster!
+            const hasTechnicalMatch = (queryTechKeywords.length > 0 && matchedKeywordsCount > 0) || (targetClusters.length > 0 && domainSatisfied)
+            if (!hasTechnicalMatch) {
+                continue // STRICT REJECTION FOR NON-MATCHING CANDIDATES
             }
 
             // 3. EXACT PHRASE BONUSES
@@ -552,7 +554,7 @@ app.get("/ai-search", protect, async (req, res) => {
                 }
             })
 
-            // 4. CGPA & EXPERIENCE BONUSES
+            // 4. CGPA & EXPERIENCE BONUSES (APPLIED ONLY TO QUALIFIED MATCHES)
             if (resume.cgpa && resume.cgpa >= 8.0) {
                 score += 15
                 reasons.push(`High Academic CGPA (${resume.cgpa})`)
