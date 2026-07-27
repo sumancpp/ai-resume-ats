@@ -59,7 +59,13 @@ const resumeSchema = new mongoose.Schema({
 resumeSchema.index({ user: 1, fileHash: 1 })
 const Resume = mongoose.model("Resume", resumeSchema)
 
-// Drop legacy global fileHash_1 index if present in MongoDB
-Resume.collection.dropIndex("fileHash_1").catch(() => {})
+// Safely drop legacy global fileHash_1 index once MongoDB connection opens
+mongoose.connection.once("open", async () => {
+    try {
+        await Resume.collection.dropIndex("fileHash_1")
+    } catch (err) {
+        // Index already dropped or doesn't exist
+    }
+})
 
 export default Resume
