@@ -16,6 +16,8 @@ import {
     Award
 } from "lucide-react"
 
+import { getBackendUrl } from "../utils/api"
+
 export default function TakeExam() {
     const { token } = useParams()
     const navigate = useNavigate()
@@ -65,7 +67,7 @@ export default function TakeExam() {
     const verifyToken = async () => {
         setLoading(true)
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const backendUrl = getBackendUrl()
             const res = await axios.get(`${backendUrl}/api/exams/verify/${token}`)
 
             if (res.data.isExpired) {
@@ -111,7 +113,7 @@ export default function TakeExam() {
 
     const startExamNow = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const backendUrl = getBackendUrl()
             await axios.post(`${backendUrl}/api/exams/start/${token}`)
             setExamStarted(true)
             setTimeLeft(600)
@@ -131,7 +133,7 @@ export default function TakeExam() {
     const handleRunTest = async (question) => {
         setRunningCode(true)
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const backendUrl = getBackendUrl()
             const code = codeSubmissions[question.id] || ""
             const res = await axios.post(`${backendUrl}/api/exams/run-code`, {
                 code,
@@ -158,7 +160,7 @@ export default function TakeExam() {
     const handleSubmitExam = async () => {
         setSubmitting(true)
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const backendUrl = getBackendUrl()
 
             const formattedCodeSubmissions = Object.keys(codeSubmissions).map((qId) => ({
                 questionId: qId,

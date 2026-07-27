@@ -25,6 +25,8 @@ import {
     Send
 } from "lucide-react"
 
+import { getBackendUrl } from "../utils/api"
+
 // Custom Bar Chart Tooltip
 function CustomTooltip({ active, payload, label }) {
     if (active && payload && payload.length) {
@@ -59,22 +61,12 @@ const Dashboard = () => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
         const getApiUrl = (endpoint) => {
-            const base = import.meta.env.VITE_BACKEND_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-atsp-backend.onrender.com")
-            return `${base}${endpoint}`
+            return `${getBackendUrl()}${endpoint}`
         }
 
         try {
             const url = getApiUrl("/search?query=")
-            let res
-            try {
-                res = await axios.get(url, { headers })
-            } catch (err) {
-                if (!err.response) {
-                    res = await axios.get("http://localhost:5000/search?query=", { headers })
-                } else {
-                    throw err
-                }
-            }
+            const res = await axios.get(url, { headers })
             if (isMounted) {
                 setResumes(res?.data?.resumes || [])
                 setLoading(false)
@@ -101,7 +93,7 @@ const Dashboard = () => {
 
         setSendingBatch(true)
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const backendUrl = getBackendUrl()
             const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
             const res = await axios.post(
                 `${backendUrl}/api/exams/invite-batch`,

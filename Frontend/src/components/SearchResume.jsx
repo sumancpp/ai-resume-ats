@@ -23,6 +23,8 @@ import {
     Filter
 } from "lucide-react"
 
+import { getBackendUrl } from "../utils/api"
+
 const SearchResume = () => {
     const { token } = useAuth()
     const [activeFolder, setActiveFolder] = useState("all")
@@ -39,8 +41,7 @@ const SearchResume = () => {
     const navigate = useNavigate()
 
     const getApiUrl = (endpoint) => {
-        const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-atsp-backend.onrender.com")
-        return `${base}${endpoint}`
+        return `${getBackendUrl()}${endpoint}`
     }
 
     const PRESET_QUERIES = [
@@ -136,16 +137,7 @@ const SearchResume = () => {
             const url = getApiUrl("/upload")
             const headers = { Authorization: `Bearer ${token}` }
 
-            let response
-            try {
-                response = await axios.post(url, formData, { headers })
-            } catch (err) {
-                if (!err.response) {
-                    response = await axios.post("https://ai-resume-atsp-backend.onrender.com/upload", formData, { headers })
-                } else {
-                    throw err
-                }
-            }
+            const response = await axios.post(url, formData, { headers })
 
             const { count, duplicatesSkipped, message } = response.data
 
@@ -177,8 +169,9 @@ const SearchResume = () => {
     // =====================
     // SEMANTIC AI SEARCH (USER & FOLDER ISOLATED)
     // =====================
-    const handleSearch = async (overrideFolderId) => {
-        if (!query.trim()) {
+    const handleSearch = async (searchQuery, overrideFolderId) => {
+        const activeQuery = (typeof searchQuery === "string" ? searchQuery : query).trim()
+        if (!activeQuery) {
             alert("Please enter a job requirement or technical skills query")
             return
         }
@@ -192,22 +185,10 @@ const SearchResume = () => {
             const url = getApiUrl("/ai-search")
             const headers = { Authorization: `Bearer ${token}` }
 
-            let response
-            try {
-                response = await axios.get(url, {
-                    params: { query, folderId: targetFolder },
-                    headers
-                })
-            } catch (err) {
-                if (!err.response) {
-                    response = await axios.get("https://ai-resume-atsp-backend.onrender.com/ai-search", {
-                        params: { query, folderId: targetFolder },
-                        headers
-                    })
-                } else {
-                    throw err
-                }
-            }
+            const response = await axios.get(url, {
+                params: { query: activeQuery, folderId: targetFolder },
+                headers
+            })
 
             setResumes(response.data.resumes || [])
             setTotalUserResumes(response.data.totalUserResumes ?? response.data.resumes?.length ?? 0)
@@ -429,7 +410,7 @@ const SearchResume = () => {
                                             key={idx}
                                             onClick={() => {
                                                 setQuery(preset)
-                                                handleSearch()
+                                                handleSearch(preset)
                                             }}
                                             className="px-3 py-1 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/40 text-slate-300 hover:text-white text-xs font-medium transition"
                                         >

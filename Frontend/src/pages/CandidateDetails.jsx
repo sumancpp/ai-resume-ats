@@ -27,6 +27,8 @@ import {
 
 import InterviewModal from "../components/InterviewModal"
 
+import { getBackendUrl } from "../utils/api"
+
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
 
@@ -58,8 +60,8 @@ const CandidateDetails = () => {
 
     const fetchExamData = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
-            const token = localStorage.getItem("token")
+            const backendUrl = getBackendUrl()
+            const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
             const res = await axios.get(`${backendUrl}/api/exams/resume/${resume._id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
@@ -93,9 +95,9 @@ const CandidateDetails = () => {
         )
     }
 
-    const backendBase = import.meta.env.VITE_API_URL || "http://localhost:5000"
+    const backendBase = getBackendUrl()
     const pdfUrl = resume.filePath
-        ? `${backendBase}/${resume.filePath}`
+        ? `${backendBase}/${resume.filePath.replace(/^\//, "")}`
         : null
 
     const onDocumentLoadSuccess = ({ numPages }) => {
@@ -111,8 +113,8 @@ const CandidateDetails = () => {
     const handleToggleShortlist = async () => {
         setTogglingShortlist(true)
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
-            const token = localStorage.getItem("token")
+            const backendUrl = getBackendUrl()
+            const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
             const res = await axios.post(
                 `${backendUrl}/api/exams/shortlist/${resume._id}`,
                 {},
@@ -136,8 +138,8 @@ const CandidateDetails = () => {
 
         setSendingInvite(true)
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
-            const token = localStorage.getItem("token")
+            const backendUrl = getBackendUrl()
+            const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
             const res = await axios.post(
                 `${backendUrl}/api/exams/invite/${resume._id}`,
                 { candidateEmail },
@@ -156,8 +158,8 @@ const CandidateDetails = () => {
 
     const handleSendConfirmation = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
-            const token = localStorage.getItem("token")
+            const backendUrl = getBackendUrl()
+            const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
             const res = await axios.post(
                 `${backendUrl}/api/exams/confirm-hiring/${resume._id}`,
                 { email: candidateEmail },

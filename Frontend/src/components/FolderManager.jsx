@@ -2,6 +2,8 @@ import { useState, useEffect } from "react"
 import axios from "axios"
 import { FolderPlus, Folder, Trash2, Plus, Briefcase, Layers, X, Sparkles } from "lucide-react"
 
+import { getBackendUrl } from "../utils/api"
+
 const COLOR_OPTIONS = [
     { name: "indigo", bg: "bg-indigo-500/10", border: "border-indigo-500/30", text: "text-indigo-400", activeBg: "bg-indigo-600", dot: "bg-indigo-500" },
     { name: "emerald", bg: "bg-emerald-500/10", border: "border-emerald-500/30", text: "text-emerald-400", activeBg: "bg-emerald-600", dot: "bg-emerald-500" },
@@ -26,8 +28,7 @@ const FolderManager = ({ activeFolder, setActiveFolder, onFolderChange }) => {
     const [errorMsg, setErrorMsg] = useState("")
 
     const getApiUrl = (endpoint) => {
-        const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-atsp-backend.onrender.com")
-        return `${base}${endpoint}`
+        return `${getBackendUrl()}${endpoint}`
     }
 
     const fetchFolders = async () => {

@@ -1,17 +1,13 @@
 import { createContext, useContext, useState, useEffect } from "react"
 import axios from "axios"
+import { getBackendUrl } from "../utils/api"
 
 const AuthContext = createContext()
 
 export const useAuth = () => useContext(AuthContext)
 
 const getApiBaseUrl = () => {
-    if (import.meta.env.VITE_API_URL) {
-        return `${import.meta.env.VITE_API_URL}/api/auth`
-    }
-    return window.location.hostname === "localhost"
-        ? "http://localhost:5000/api/auth"
-        : "https://ai-resume-atsp-backend.onrender.com/api/auth"
+    return `${getBackendUrl()}/api/auth`
 }
 
 const API_BASE_URL = getApiBaseUrl()

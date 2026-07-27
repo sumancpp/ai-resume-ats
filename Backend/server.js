@@ -252,13 +252,21 @@ app.post(
                     text = cleanPDFText(fileBuffer.toString("utf-8"))
                 }
 
-                // Extract Skills
+                // Extract Skills with Word Boundary Checks
                 const extractedSkills = []
+                const normalizedText = text.toLowerCase()
                 skills.forEach((skill) => {
-                    const normalizedSkill = skill.toLowerCase()
-                    const normalizedText = text.toLowerCase()
-                    if (normalizedText.includes(normalizedSkill)) {
-                        extractedSkills.push(skill)
+                    const normSkill = skill.toLowerCase()
+                    if (normSkill.length <= 3) {
+                        const escaped = normSkill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+                        const regex = new RegExp(`(?:^|[^a-zA-Z0-9_#+])${escaped}(?:$|[^a-zA-Z0-9_#+])`, "i")
+                        if (regex.test(normalizedText)) {
+                            extractedSkills.push(skill)
+                        }
+                    } else {
+                        if (normalizedText.includes(normSkill)) {
+                            extractedSkills.push(skill)
+                        }
                     }
                 })
 
@@ -408,38 +416,32 @@ app.get("/search", protect, async (req, res) => {
 })
 
 // =====================
-// TECH KNOWLEDGE CLUSTERS & DOMAIN MATRIX
+// STOP WORDS & WORD MATCHING UTILITY
 // =====================
-const TECH_CLUSTERS = {
-    python: ["python", "python3", "py", "fastapi", "django", "flask", "pytorch", "tensorflow", "keras", "pandas", "numpy", "scikit-learn", "scikit"],
-    ml: ["machine learning", "ml", "deep learning", "pytorch", "tensorflow", "keras", "pandas", "numpy", "scikit-learn", "nlp", "opencv", "ai", "artificial intelligence", "data science"],
-    frontend: ["react", "reactjs", "react.js", "vue", "vuejs", "angular", "nextjs", "next.js", "html", "css", "javascript", "typescript", "tailwind", "bootstrap", "ui/ux", "frontend"],
-    backend: ["node", "nodejs", "node.js", "express", "expressjs", "express.js", "python", "django", "fastapi", "java", "spring", "springboot", "golang", "go", "php", "laravel", "c#", ".net", "backend"],
-    fullstack: ["full stack", "fullstack", "mern", "mean", "node", "nodejs", "node.js", "express", "expressjs", "mongodb", "react", "reactjs", "nextjs", "vue", "angular"],
-    database: ["mongodb", "postgresql", "postgres", "mysql", "sqlite", "sqlite3", "redis", "sql", "nosql", "database"],
-    devops: ["docker", "kubernetes", "k8s", "aws", "azure", "gcp", "ci/cd", "terraform", "ansible", "linux", "bash", "devops"],
-    cybersecurity: ["cybersecurity", "security", "ethical hacking", "penetration testing", "wireshark", "nmap", "burp suite", "metasploit", "kali linux"]
-}
-
 const STOP_WORDS = new Set([
     "with", "in", "for", "and", "or", "of", "to", "a", "an", "the",
     "proficient", "experience", "skills", "developer", "engineer",
     "working", "knowledge", "strong", "good", "etc", "looking", "candidate",
-    "role", "position", "having", "who", "has", "is", "are", "at", "by", "from"
+    "role", "position", "having", "who", "has", "is", "are", "at", "by", "from",
+    "specialist", "analyst", "full", "stack", "general"
 ])
 
-const hasExactWordMatch = (text, term) => {
-    if (!text || !term) return false
-    if (term.length <= 3) {
-        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-        const regex = new RegExp(`(?:^|[^a-zA-Z0-9_])${escaped}(?:$|[^a-zA-Z0-9_])`, "i")
-        return regex.test(text)
+const checkKeywordMatch = (text, keyword) => {
+    if (!text || !keyword) return false
+    const normText = text.toLowerCase()
+    const normKey = keyword.toLowerCase()
+
+    if (normKey.length <= 3) {
+        const escaped = normKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        const regex = new RegExp(`(?:^|[^a-zA-Z0-9_#+])${escaped}(?:$|[^a-zA-Z0-9_#+])`, "i")
+        return regex.test(normText)
     }
-    return text.includes(term)
+
+    return normText.includes(normKey)
 }
 
 // =====================
-// AI SEARCH (DOMAIN & FOLDER-INTELLIGENT ATS SEARCH ENGINE)
+// AI SEARCH (PRECISION SKILLS & ATS MATCHING ENGINE)
 // =====================
 app.get("/ai-search", protect, async (req, res) => {
     try {
@@ -473,17 +475,7 @@ app.get("/ai-search", protect, async (req, res) => {
             })
         }
 
-        // Identify which Domain Clusters the query is asking for
-        const targetClusters = []
-        Object.keys(TECH_CLUSTERS).forEach((clusterKey) => {
-            const clusterTerms = TECH_CLUSTERS[clusterKey]
-            const isClusterRequested = clusterTerms.some((term) => hasExactWordMatch(userQueryLower, term))
-            if (isClusterRequested) {
-                targetClusters.push(clusterKey)
-            }
-        })
-
-        // Extract raw query words minus Stop Words
+        // Extract key technical tokens from query
         const rawTokens = userQueryLower.split(/[\s,;&+/]+/)
         const queryTechKeywords = rawTokens.filter((token) => token.length >= 2 && !STOP_WORDS.has(token))
 
@@ -492,97 +484,70 @@ app.get("/ai-search", protect, async (req, res) => {
         for (const resume of userResumes) {
             let score = 0
             let reasons = []
+            let matchedKeywordsCount = 0
 
-            const resumeSkillsLower = (resume.skills || []).map((s) => s.toLowerCase())
+            const candidateSkills = (resume.skills || []).map((s) => s.toLowerCase())
             const fullTextLower = `
                 ${resume.name || ""}
-                ${resume.skills.join(" ")}
+                ${candidateSkills.join(" ")}
                 ${resume.college || ""}
                 ${resume.resumeText || ""}
                 ${resume.summary || ""}
                 ${resume.roleCategory || ""}
             `.toLowerCase()
 
-            // 1. STRICT DOMAIN CLUSTER GUARD
-            let domainSatisfied = targetClusters.length === 0
-
-            targetClusters.forEach((clusterKey) => {
-                const terms = TECH_CLUSTERS[clusterKey]
-                const candidateHasClusterTech = terms.some((term) => {
-                    return resumeSkillsLower.some((s) => hasExactWordMatch(s, term)) || hasExactWordMatch(fullTextLower, term)
-                })
-
-                if (candidateHasClusterTech) {
-                    domainSatisfied = true
-                    score += 40
-                    reasons.push(`${clusterKey.toUpperCase()} domain alignment`)
-                }
-            })
-
-            if (!domainSatisfied) {
-                continue // REJECT CANDIDATE
-            }
-
-            // 2. KEYWORD RELEVANCE SCORING
-            let matchedKeywordsCount = 0
+            // 1. Technical Keyword Evaluation
             queryTechKeywords.forEach((keyword) => {
-                let matchedInSkills = false
-                let matchedInText = false
-
-                resumeSkillsLower.forEach((skill) => {
-                    if (hasExactWordMatch(skill, keyword)) {
-                        matchedInSkills = true
-                    }
-                })
-
-                if (hasExactWordMatch(fullTextLower, keyword)) {
-                    matchedInText = true
-                }
+                const matchedInSkills = candidateSkills.some((skill) => checkKeywordMatch(skill, keyword))
+                const matchedInText = checkKeywordMatch(fullTextLower, keyword)
 
                 if (matchedInSkills) {
                     matchedKeywordsCount++
-                    score += 45
-                    reasons.push(`${keyword.toUpperCase()} skill`)
+                    score += 50
+                    reasons.push(`${keyword.toUpperCase()} skill match`)
                 } else if (matchedInText) {
                     matchedKeywordsCount++
-                    score += 25
-                    reasons.push(`"${keyword}" in resume`)
+                    score += 30
+                    reasons.push(`"${keyword}" mentioned in CV`)
                 }
             })
 
-            // QUALIFICATION GUARD: Candidate MUST match at least 1 requested keyword or domain cluster!
-            const hasTechnicalMatch = (queryTechKeywords.length > 0 && matchedKeywordsCount > 0) || (targetClusters.length > 0 && domainSatisfied)
-            if (!hasTechnicalMatch) {
-                continue // STRICT REJECTION FOR NON-MATCHING CANDIDATES
+            // STRICT FILTER: If user searched for technical keywords, candidate MUST match AT LEAST 1 keyword!
+            if (queryTechKeywords.length > 0 && matchedKeywordsCount === 0) {
+                continue // Exclude candidates with 0 matching terms
             }
 
-            // 3. EXACT PHRASE BONUSES
-            const exactPhrases = ["full stack", "machine learning", "data science", "rest api", "cloud computing", "ui/ux", "fastapi", "pytorch", "node.js", "express.js", "mongodb"]
+            // 2. Exact Multi-word Phrase Match Bonus
+            const exactPhrases = [
+                "full stack", "machine learning", "data science", "rest api", "cloud computing",
+                "ui/ux", "fastapi", "pytorch", "node.js", "express.js", "mongodb", "react native"
+            ]
             exactPhrases.forEach((phrase) => {
-                if (userQueryLower.includes(phrase) && fullTextLower.includes(phrase)) {
+                if (userQueryLower.includes(phrase) && checkKeywordMatch(fullTextLower, phrase)) {
                     score += 35
-                    reasons.push(`Exact "${phrase}" match`)
+                    reasons.push(`Exact "${phrase}" phrase match`)
                 }
             })
 
-            // 4. CGPA & EXPERIENCE BONUSES (APPLIED ONLY TO QUALIFIED MATCHES)
+            // 3. Academic CGPA Bonus
             if (resume.cgpa && resume.cgpa >= 8.0) {
-                score += 15
-                reasons.push(`High Academic CGPA (${resume.cgpa})`)
+                score += 10
+                reasons.push(`High CGPA (${resume.cgpa})`)
             }
 
-            if (userQueryLower.includes("intern") && fullTextLower.includes("intern")) {
-                score += 15
-                reasons.push("Internship experience")
+            // 4. Role Category Bonus
+            if (resume.roleCategory && userQueryLower.includes(resume.roleCategory.toLowerCase())) {
+                score += 20
+                reasons.push(`${resume.roleCategory} category match`)
             }
 
-            resume.score = score
-            resume.reason = Array.from(new Set(reasons)).slice(0, 4).join(" | ")
+            resume.score = score > 0 ? score : 50
+            resume.reason = Array.from(new Set(reasons)).slice(0, 4).join(" | ") || "Matched candidate profile"
 
             scoredResumes.push(resume)
         }
 
-        // Sort candidates by match score descending
+        // Sort candidate matches by score descending
         scoredResumes.sort((a, b) => b.score - a.score)
 
         res.json({

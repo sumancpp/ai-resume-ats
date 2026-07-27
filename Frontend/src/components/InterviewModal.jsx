@@ -14,6 +14,8 @@ import {
     Send
 } from "lucide-react"
 
+import { getBackendUrl } from "../utils/api"
+
 export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpdate }) {
     const [cameraActive, setCameraActive] = useState(false)
     const [micActive, setMicActive] = useState(false)
@@ -82,8 +84,8 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
         if (!exam?._id) return
         setSubmitting(true)
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
-            const token = localStorage.getItem("token")
+            const backendUrl = getBackendUrl()
+            const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
 
             await axios.patch(
                 `${backendUrl}/api/exams/interview/${exam._id}`,
@@ -109,8 +111,8 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
         if (!candidate?._id) return
         setSubmitting(true)
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
-            const token = localStorage.getItem("token")
+            const backendUrl = getBackendUrl()
+            const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
 
             const res = await axios.post(
                 `${backendUrl}/api/exams/confirm-hiring/${candidate._id}`,
