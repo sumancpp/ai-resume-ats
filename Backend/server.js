@@ -19,6 +19,7 @@ import skills from "./utils/skills.js"
 import normalizeText from "./helpers/normalizeText.js"
 import { getGeminiModel } from "./ai/gemini.js"
 import authRoutes from "./routes/authRoutes.js"
+import examRoutes from "./routes/examRoutes.js"
 import { protect } from "./middleware/authMiddleware.js"
 
 connectDB()
@@ -40,9 +41,10 @@ app.use(cors({
 app.use(express.json())
 
 // =====================
-// AUTH ROUTES
+// AUTH & EXAM ROUTES
 // =====================
 app.use("/api/auth", authRoutes)
+app.use("/api/exams", examRoutes)
 
 // =====================
 // STATIC UPLOADS
@@ -286,6 +288,14 @@ app.post(
                     name = text.split(" ").slice(0, 2).join(" ")
                 }
 
+                // Extract Candidate Email
+                let email = null
+                const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
+                const emailMatch = text.match(emailRegex)
+                if (emailMatch) {
+                    email = emailMatch[1].toLowerCase().trim()
+                }
+
                 // Auto Role Category Detection
                 const roleCategory = detectRoleCategory(extractedSkills, text)
 
@@ -314,6 +324,7 @@ ${text}
                     folder: targetFolderId,
                     roleCategory,
                     name,
+                    email,
                     skills: extractedSkills,
                     cgpa,
                     college,

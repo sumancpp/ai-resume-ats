@@ -19,7 +19,10 @@ import {
     ArrowLeft,
     Search,
     ChevronRight,
-    Award
+    Award,
+    Mail,
+    UserCheck,
+    Send
 } from "lucide-react"
 
 // Custom Bar Chart Tooltip
@@ -41,48 +44,79 @@ const Dashboard = () => {
     const [resumes, setResumes] = useState([])
     const [loading, setLoading] = useState(true)
     const [tableSearch, setTableSearch] = useState("")
+    const [sendingBatch, setSendingBatch] = useState(false)
 
     const navigate = useNavigate()
 
     useEffect(() => {
         let isMounted = true
-        const token = localStorage.getItem("talent_ai_token")
+        fetchDashboardData(isMounted)
+        return () => { isMounted = false }
+    }, [])
+
+    const fetchDashboardData = async (isMounted = true) => {
+        const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
         const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
         const getApiUrl = (endpoint) => {
-            const base = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-atsp-backend.onrender.com")
+            const base = import.meta.env.VITE_BACKEND_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ai-resume-atsp-backend.onrender.com")
             return `${base}${endpoint}`
         }
 
-        const fetchDashboardData = async () => {
+        try {
+            const url = getApiUrl("/search?query=")
+            let res
             try {
-                const url = getApiUrl("/search?query=")
-                let res
-                try {
-                    res = await axios.get(url, { headers })
-                } catch (err) {
-                    if (!err.response) {
-                        res = await axios.get("https://ai-resume-atsp-backend.onrender.com/search?query=", { headers })
-                    } else {
-                        throw err
-                    }
-                }
-                if (isMounted) {
-                    setResumes(res?.data?.resumes || [])
-                    setLoading(false)
-                }
-            } catch (error) {
-                console.error("Dashboard fetch error:", error)
-                if (isMounted) {
-                    setResumes([])
-                    setLoading(false)
+                res = await axios.get(url, { headers })
+            } catch (err) {
+                if (!err.response) {
+                    res = await axios.get("http://localhost:5000/search?query=", { headers })
+                } else {
+                    throw err
                 }
             }
+            if (isMounted) {
+                setResumes(res?.data?.resumes || [])
+                setLoading(false)
+            }
+        } catch (error) {
+            console.error("Dashboard fetch error:", error)
+            if (isMounted) {
+                setResumes([])
+                setLoading(false)
+            }
+        }
+    }
+
+    const handleSendBatchExamInvites = async () => {
+        const shortlistedCount = resumes.filter((r) => r.isShortlisted).length
+        if (shortlistedCount === 0) {
+            alert("No shortlisted candidates found. Please shortlist candidate CVs first by clicking '+ Shortlist' on their details page.")
+            return
         }
 
-        fetchDashboardData()
-        return () => { isMounted = false }
-    }, [])
+        if (!confirm(`Are you sure you want to generate AI exams and send email invites to all ${shortlistedCount} shortlisted candidates?`)) {
+            return
+        }
+
+        setSendingBatch(true)
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+            const res = await axios.post(
+                `${backendUrl}/api/exams/invite-batch`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+            )
+
+            alert(res.data.message)
+            fetchDashboardData(true)
+        } catch (err) {
+            alert("Error sending batch invites: " + (err.response?.data?.message || err.message))
+        } finally {
+            setSendingBatch(false)
+        }
+    }
 
     // =====================
     // COMPUTED METRICS
@@ -98,73 +132,91 @@ const Dashboard = () => {
             : "0.00"
 
     const uniqueColleges = new Set(
-        resumes?.filter((r) => r?.college)?.map((r) => r.college)
+        resumes
+            ?.map((r) => r?.college)
+            .filter((c) => c && c.trim() !== "")
     ).size
 
-    const skillCount = {}
-    resumes?.forEach((resume) => {
-        if (resume?.skills?.length > 0) {
-            resume.skills.forEach((skill) => {
-                const formattedSkill = skill.trim()
-                if (skillCount[formattedSkill]) {
-                    skillCount[formattedSkill] += 1
-                } else {
-                    skillCount[formattedSkill] = 1
+    const shortlistedCandidatesCount = resumes?.filter((r) => r.isShortlisted).length || 0
+
+    // SKILLS FREQUENCY MAP
+    const skillCounts = {}
+    resumes?.forEach((r) => {
+        if (Array.isArray(r.skills)) {
+            r.skills.forEach((sk) => {
+                if (sk) {
+                    const normSkill = sk.trim()
+                    skillCounts[normSkill] = (skillCounts[normSkill] || 0) + 1
                 }
             })
         }
     })
 
-    const chartData = Object.entries(skillCount)
+    const totalSkillsCount = Object.keys(skillCounts).length
+
+    const chartData = Object.entries(skillCounts)
         .map(([skill, count]) => ({ skill, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8)
 
-    const totalSkillsCount = Object.keys(skillCount).length
-
-    // Filter table list
-    const filteredResumes = resumes.filter((r) => {
+    const filteredResumes = resumes?.filter((r) => {
         if (!tableSearch) return true
-        const searchLower = tableSearch.toLowerCase()
+        const search = tableSearch.toLowerCase()
         return (
-            r.name?.toLowerCase().includes(searchLower) ||
-            r.college?.toLowerCase().includes(searchLower) ||
-            r.skills?.some((s) => s.toLowerCase().includes(searchLower))
+            (r.name && r.name.toLowerCase().includes(search)) ||
+            (r.college && r.college.toLowerCase().includes(search)) ||
+            (r.skills && r.skills.some((s) => s.toLowerCase().includes(search)))
         )
     })
 
     return (
         <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 p-4 md:p-8 lg:p-12">
-            <div className="max-w-7xl mx-auto space-y-10">
+            <div className="max-w-7xl mx-auto space-y-8">
 
-                {/* HEADER */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800 pb-6">
-                    <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                            <BarChart3 className="w-3.5 h-3.5" />
-                            Real-time Analytics
-                        </div>
-                        <h1 className="text-3xl font-extrabold text-white tracking-tight">
-                            ATS Talent Intelligence Dashboard
+                {/* DASHBOARD HEADER */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+                    <div className="space-y-1">
+                        <button
+                            onClick={() => navigate("/")}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300 mb-2 transition-colors cursor-pointer"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back to Resume Matcher
+                        </button>
+                        <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                            <BarChart3 className="w-8 h-8 text-indigo-500" />
+                            Talent Analytics & Hiring Dashboard
                         </h1>
-                        <p className="text-slate-400 text-sm mt-1">
-                            High-level skill distribution, academic metrics, and candidate roster.
+                        <p className="text-slate-400 text-sm">
+                            Overview of candidate pool, AI exams, shortlists, and technical skill metrics
                         </p>
                     </div>
 
-                    <button
-                        onClick={() => navigate("/")}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-sm font-semibold transition-all duration-200 self-start sm:self-auto cursor-pointer"
-                    >
-                        <ArrowLeft className="w-4 h-4 text-indigo-400" />
-                        Back to Resume Matcher
-                    </button>
+                    {/* BATCH ACTION BUTTON */}
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleSendBatchExamInvites}
+                            disabled={sendingBatch}
+                            className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/30 cursor-pointer transition-all active:scale-95"
+                        >
+                            <Mail className="w-4 h-4" />
+                            {sendingBatch ? "Sending AI Exams..." : `Mail All Shortlisted (${shortlistedCandidatesCount})`}
+                        </button>
+
+                        <button
+                            onClick={() => navigate("/")}
+                            className="px-4 py-2.5 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-200 font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                            <Sparkles className="w-4 h-4 text-indigo-400" />
+                            AI Matcher
+                        </button>
+                    </div>
                 </div>
 
-                {/* METRICS CARDS (4 GRID) */}
+                {/* METRICS CARDS GRID (4 Cards) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                    {/* CARD 1: TOTAL RESUMES */}
+                    {/* CARD 1: TOTAL CANDIDATES */}
                     <div className="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-6 shadow-xl flex items-center justify-between">
                         <div className="space-y-2">
                             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -174,7 +226,7 @@ const Dashboard = () => {
                                 {totalResumes}
                             </div>
                             <span className="text-[11px] text-indigo-400 font-medium">
-                                Vector indexed CVs
+                                Active Candidate Pool
                             </span>
                         </div>
                         <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
@@ -182,21 +234,21 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* CARD 2: AVG CGPA */}
+                    {/* CARD 2: SHORTLISTED CANDIDATES */}
                     <div className="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-6 shadow-xl flex items-center justify-between">
                         <div className="space-y-2">
                             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                                Average CGPA
+                                Shortlisted
                             </span>
                             <div className="text-3xl font-black text-emerald-400">
-                                {averageCgpa}
+                                {shortlistedCandidatesCount}
                             </div>
-                            <span className="text-[11px] text-emerald-500/80 font-medium">
-                                Out of 10.0 scale
+                            <span className="text-[11px] text-emerald-400/80 font-medium">
+                                Ready for Technical Exam
                             </span>
                         </div>
                         <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
-                            <GraduationCap className="w-6 h-6" />
+                            <UserCheck className="w-6 h-6" />
                         </div>
                     </div>
 
@@ -299,7 +351,7 @@ const Dashboard = () => {
                         <div>
                             <h2 className="text-xl font-bold text-white">Indexed Candidates Directory</h2>
                             <p className="text-slate-400 text-xs mt-1">
-                                Searchable table of all uploaded resume profiles
+                                Searchable table of all uploaded resume profiles & recruitment status
                             </p>
                         </div>
 
@@ -322,8 +374,8 @@ const Dashboard = () => {
                             <thead>
                                 <tr className="border-b border-slate-800 text-slate-400 uppercase text-[11px] font-semibold tracking-wider">
                                     <th className="py-3 px-4">Candidate Name</th>
-                                    <th className="py-3 px-4">College / University</th>
-                                    <th className="py-3 px-4">CGPA</th>
+                                    <th className="py-3 px-4">Status & Shortlist</th>
+                                    <th className="py-3 px-4">Exam Score</th>
                                     <th className="py-3 px-4">Extracted Skills</th>
                                     <th className="py-3 px-4 text-right">Action</th>
                                 </tr>
@@ -348,38 +400,75 @@ const Dashboard = () => {
                                             className="hover:bg-slate-800/40 transition-colors"
                                         >
                                             <td className="py-3.5 px-4 font-semibold text-white">
-                                                {resume.name || "Unnamed Candidate"}
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 font-bold flex items-center justify-center border border-indigo-500/30">
+                                                        {resume.name ? resume.name.charAt(0).toUpperCase() : "C"}
+                                                    </div>
+                                                    <div>
+                                                        <div>{resume.name || "Candidate"}</div>
+                                                        <div className="text-[11px] font-normal text-slate-400">{resume.college || "University"}</div>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td className="py-3.5 px-4 text-slate-300">
-                                                {resume.college || "N/A"}
-                                            </td>
-                                            <td className="py-3.5 px-4 font-bold text-indigo-400">
-                                                {resume.cgpa || "N/A"}
-                                            </td>
+
                                             <td className="py-3.5 px-4">
-                                                <div className="flex flex-wrap gap-1 max-w-xs">
-                                                    {resume.skills?.slice(0, 4).map((skill, sIdx) => (
-                                                        <span
-                                                            key={sIdx}
-                                                            className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]"
-                                                        >
-                                                            {skill}
+                                                <div className="flex items-center gap-1.5">
+                                                    {resume.isShortlisted ? (
+                                                        <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold rounded-full text-[10px]">
+                                                            SHORTLISTED
                                                         </span>
-                                                    ))}
-                                                    {resume.skills?.length > 4 && (
-                                                        <span className="text-[10px] text-slate-500">
-                                                            +{resume.skills.length - 4} more
+                                                    ) : (
+                                                        <span className="px-2.5 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded-full text-[10px]">
+                                                            Indexed
+                                                        </span>
+                                                    )}
+                                                    {resume.hiringStatus === "hired" && (
+                                                        <span className="px-2.5 py-1 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-bold rounded-full text-[10px]">
+                                                            HIRED
                                                         </span>
                                                     )}
                                                 </div>
                                             </td>
+
+                                            <td className="py-3.5 px-4 font-semibold text-indigo-300">
+                                                {resume.examScore !== null && resume.examScore !== undefined ? (
+                                                    <span className="px-2 py-1 bg-indigo-950 border border-indigo-800/60 rounded text-xs font-bold text-indigo-300">
+                                                        {resume.examScore}%
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-slate-500 text-[11px]">—</span>
+                                                )}
+                                            </td>
+
+                                            <td className="py-3.5 px-4">
+                                                <div className="flex flex-wrap gap-1 max-w-xs">
+                                                    {resume.skills && resume.skills.length > 0 ? (
+                                                        resume.skills.slice(0, 3).map((sk, sIdx) => (
+                                                            <span
+                                                                key={sIdx}
+                                                                className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] border border-slate-700/60"
+                                                            >
+                                                                {sk}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-slate-500 text-[11px]">—</span>
+                                                    )}
+                                                    {resume.skills && resume.skills.length > 3 && (
+                                                        <span className="text-slate-500 text-[10px]">
+                                                            +{resume.skills.length - 3}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+
                                             <td className="py-3.5 px-4 text-right">
                                                 <button
                                                     onClick={() => navigate("/candidate", { state: resume })}
                                                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-semibold transition-colors cursor-pointer"
                                                 >
-                                                    View Details
-                                                    <ChevronRight className="w-3.5 h-3.5" />
+                                                    View Profile
+                                                    <ChevronRight className="w-3 h-3" />
                                                 </button>
                                             </td>
                                         </tr>

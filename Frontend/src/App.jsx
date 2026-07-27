@@ -7,6 +7,7 @@ import {
 import SearchResume from "./components/SearchResume"
 import CandidateDetails from "./pages/CandidateDetails"
 import Dashboard from "./pages/Dashboard"
+import TakeExam from "./pages/TakeExam"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import ForgotPassword from "./pages/ForgotPassword"
@@ -45,6 +46,12 @@ function App() {
                   <Dashboard />
                 </ProtectedRoute>
               }
+            />
+
+            {/* Public Exam Assessment Route */}
+            <Route
+              path="/exam/:token"
+              element={<TakeExam />}
             />
 
             {/* Public Auth Routes */}

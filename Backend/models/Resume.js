@@ -50,6 +50,38 @@ const resumeSchema = new mongoose.Schema({
 
     fileHash: {
         type: String
+    },
+
+    email: {
+        type: String
+    },
+
+    isShortlisted: {
+        type: Boolean,
+        default: false
+    },
+
+    latestExam: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Exam",
+        default: null
+    },
+
+    examStatus: {
+        type: String,
+        enum: ["none", "invited", "in_progress", "completed", "expired"],
+        default: "none"
+    },
+
+    examScore: {
+        type: Number,
+        default: null
+    },
+
+    hiringStatus: {
+        type: String,
+        enum: ["none", "shortlisted", "exam_invited", "exam_completed", "interview_scheduled", "hired", "rejected"],
+        default: "none"
     }
 }, {
     timestamps: true

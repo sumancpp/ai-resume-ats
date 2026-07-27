@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { Document, Page, pdfjs } from "react-pdf"
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.js?url"
+import axios from "axios"
 import {
     ArrowLeft,
     GraduationCap,
@@ -13,8 +14,18 @@ import {
     ChevronRight,
     ZoomIn,
     ZoomOut,
-    CheckCircle2
+    CheckCircle2,
+    Mail,
+    Send,
+    Video,
+    UserCheck,
+    Clock,
+    Check,
+    X,
+    FileCheck
 } from "lucide-react"
+
+import InterviewModal from "../components/InterviewModal"
 
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
@@ -24,12 +35,42 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
 const CandidateDetails = () => {
     const location = useLocation()
     const navigate = useNavigate()
-    const resume = location.state
+    const initialResume = location.state
 
+    const [resume, setResume] = useState(initialResume)
     const [numPages, setNumPages] = useState(null)
     const [pageNumber, setPageNumber] = useState(1)
     const [scale, setScale] = useState(1.0)
     const [pdfError, setPdfError] = useState(false)
+
+    // Recruitment Action States
+    const [candidateEmail, setCandidateEmail] = useState(initialResume?.email || "")
+    const [sendingInvite, setSendingInvite] = useState(false)
+    const [togglingShortlist, setTogglingShortlist] = useState(false)
+    const [examData, setExamData] = useState(null)
+    const [isInterviewOpen, setIsInterviewOpen] = useState(false)
+
+    useEffect(() => {
+        if (resume?._id) {
+            fetchExamData()
+        }
+    }, [resume?._id])
+
+    const fetchExamData = async () => {
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const token = localStorage.getItem("token")
+            const res = await axios.get(`${backendUrl}/api/exams/resume/${resume._id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+
+            if (res.data.success) {
+                setExamData(res.data.exam)
+            }
+        } catch (err) {
+            // Exam record not generated yet
+        }
+    }
 
     if (!resume) {
         return (
@@ -43,7 +84,7 @@ const CandidateDetails = () => {
                 </p>
                 <button
                     onClick={() => navigate("/")}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all cursor-pointer"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Back to Resume Matcher
@@ -52,7 +93,7 @@ const CandidateDetails = () => {
         )
     }
 
-    const backendBase = import.meta.env.VITE_API_URL || "https://ai-resume-atsp-backend.onrender.com"
+    const backendBase = import.meta.env.VITE_API_URL || "http://localhost:5000"
     const pdfUrl = resume.filePath
         ? `${backendBase}/${resume.filePath}`
         : null
@@ -65,6 +106,69 @@ const CandidateDetails = () => {
     const onDocumentLoadError = (err) => {
         console.error("PDF Load Error:", err)
         setPdfError(true)
+    }
+
+    const handleToggleShortlist = async () => {
+        setTogglingShortlist(true)
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const token = localStorage.getItem("token")
+            const res = await axios.post(
+                `${backendUrl}/api/exams/shortlist/${resume._id}`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+            )
+
+            setResume((prev) => ({ ...prev, isShortlisted: res.data.isShortlisted }))
+            alert(res.data.message)
+        } catch (err) {
+            alert("Error toggling shortlist: " + (err.response?.data?.message || err.message))
+        } finally {
+            setTogglingShortlist(false)
+        }
+    }
+
+    const handleSendExamInvite = async () => {
+        if (!candidateEmail || !candidateEmail.includes("@")) {
+            alert("Please enter a valid candidate email address to send the exam invitation.")
+            return
+        }
+
+        setSendingInvite(true)
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const token = localStorage.getItem("token")
+            const res = await axios.post(
+                `${backendUrl}/api/exams/invite/${resume._id}`,
+                { candidateEmail },
+                { headers: { Authorization: `Bearer ${token}` } }
+            )
+
+            alert(res.data.message)
+            setResume((prev) => ({ ...prev, isShortlisted: true, examStatus: "invited" }))
+            fetchExamData()
+        } catch (err) {
+            alert("Error sending exam invite: " + (err.response?.data?.message || err.message))
+        } finally {
+            setSendingInvite(false)
+        }
+    }
+
+    const handleSendConfirmation = async () => {
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            const token = localStorage.getItem("token")
+            const res = await axios.post(
+                `${backendUrl}/api/exams/confirm-hiring/${resume._id}`,
+                { email: candidateEmail },
+                { headers: { Authorization: `Bearer ${token}` } }
+            )
+
+            alert(res.data.message)
+            setResume((prev) => ({ ...prev, hiringStatus: "hired" }))
+        } catch (err) {
+            alert("Error sending confirmation email: " + (err.response?.data?.message || err.message))
+        }
     }
 
     return (
@@ -99,7 +203,7 @@ const CandidateDetails = () => {
                 {/* MAIN SPLIT VIEW */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-                    {/* LEFT COLUMN: CANDIDATE INFO (5 cols) */}
+                    {/* LEFT COLUMN: CANDIDATE INFO & RECRUITMENT PIPELINE (5 cols) */}
                     <div className="lg:col-span-5 space-y-6">
 
                         {/* CANDIDATE HEADER CARD */}
@@ -128,6 +232,84 @@ const CandidateDetails = () => {
                                 )}
                             </div>
 
+                            {/* RECRUITMENT ACTION PIPELINE */}
+                            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-4">
+                                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                    <FileCheck className="w-4 h-4 text-indigo-400" />
+                                    Recruitment Pipeline Actions
+                                </h3>
+
+                                {/* EMAIL INPUT & SHORTLIST BUTTON */}
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-semibold text-slate-400 block">Candidate Email Address:</label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="email"
+                                            value={candidateEmail}
+                                            onChange={(e) => setCandidateEmail(e.target.value)}
+                                            placeholder="candidate@example.com"
+                                            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                                        />
+                                        <button
+                                            onClick={handleToggleShortlist}
+                                            disabled={togglingShortlist}
+                                            className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${resume.isShortlisted ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"}`}
+                                        >
+                                            {resume.isShortlisted ? "✓ Shortlisted" : "+ Shortlist"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* ACTION BUTTONS */}
+                                <div className="grid grid-cols-1 gap-2.5 pt-1">
+                                    {/* 1. SEND EXAM INVITE */}
+                                    <button
+                                        onClick={handleSendExamInvite}
+                                        disabled={sendingInvite}
+                                        className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-indigo-600/20"
+                                    >
+                                        <Mail className="w-4 h-4" />
+                                        {sendingInvite ? "Generating AI Exam..." : "Send 24h Exam Invite Email"}
+                                    </button>
+
+                                    {/* 2. LAUNCH INTERVIEW modal */}
+                                    <button
+                                        onClick={() => setIsInterviewOpen(true)}
+                                        className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                                    >
+                                        <Video className="w-4 h-4 text-indigo-400" />
+                                        Launch Video & Mic Interview Round
+                                    </button>
+
+                                    {/* 3. SEND CONFIRMATION EMAIL */}
+                                    <button
+                                        onClick={handleSendConfirmation}
+                                        className="w-full py-2.5 bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-emerald-600/20"
+                                    >
+                                        <Send className="w-4 h-4" />
+                                        Send Final Offer & Confirmation Email
+                                    </button>
+                                </div>
+
+                                {/* EXAM STATUS BADGE */}
+                                {examData && (
+                                    <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 space-y-2 text-xs">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-slate-400 font-semibold">Exam Status:</span>
+                                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${examData.status === "completed" ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+                                                {examData.status}
+                                            </span>
+                                        </div>
+                                        {examData.status === "completed" && (
+                                            <div className="flex items-center justify-between text-indigo-300 font-bold">
+                                                <span>AI Auto-Score:</span>
+                                                <span className="text-sm">{examData.score}%</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* ACADEMICS & METRICS */}
                             <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
                                 <div className="space-y-1">
@@ -140,11 +322,11 @@ const CandidateDetails = () => {
                                 </div>
                                 <div className="space-y-1">
                                     <span className="text-[11px] font-semibold text-slate-400 uppercase">
-                                        Verification Status
+                                        Hiring Status
                                     </span>
-                                    <div className="text-xs font-bold text-emerald-400 flex items-center gap-1 mt-1">
+                                    <div className="text-xs font-bold text-emerald-400 flex items-center gap-1 mt-1 capitalize">
                                         <CheckCircle2 className="w-3.5 h-3.5" />
-                                        Vector Verified
+                                        {resume.hiringStatus || "Shortlisted"}
                                     </div>
                                 </div>
                             </div>
@@ -201,13 +383,12 @@ const CandidateDetails = () => {
 
                             {/* CONTROLS */}
                             <div className="flex items-center gap-2">
-                                {/* PAGE COUNTER */}
                                 {numPages && (
                                     <div className="flex items-center gap-1 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
                                         <button
                                             onClick={() => setPageNumber((p) => Math.max(p - 1, 1))}
                                             disabled={pageNumber <= 1}
-                                            className="hover:text-white disabled:opacity-30"
+                                            className="hover:text-white disabled:opacity-30 cursor-pointer"
                                         >
                                             <ChevronLeft className="w-3.5 h-3.5" />
                                         </button>
@@ -217,18 +398,17 @@ const CandidateDetails = () => {
                                         <button
                                             onClick={() => setPageNumber((p) => Math.min(p + 1, numPages))}
                                             disabled={pageNumber >= numPages}
-                                            className="hover:text-white disabled:opacity-30"
+                                            className="hover:text-white disabled:opacity-30 cursor-pointer"
                                         >
                                             <ChevronRight className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 )}
 
-                                {/* ZOOM CONTROLS */}
                                 <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
                                     <button
                                         onClick={() => setScale((s) => Math.max(s - 0.2, 0.6))}
-                                        className="p-1 hover:text-white"
+                                        className="p-1 hover:text-white cursor-pointer"
                                         title="Zoom Out"
                                     >
                                         <ZoomOut className="w-3.5 h-3.5" />
@@ -238,7 +418,7 @@ const CandidateDetails = () => {
                                     </span>
                                     <button
                                         onClick={() => setScale((s) => Math.min(s + 0.2, 2.0))}
-                                        className="p-1 hover:text-white"
+                                        className="p-1 hover:text-white cursor-pointer"
                                         title="Zoom In"
                                     >
                                         <ZoomIn className="w-3.5 h-3.5" />
@@ -248,54 +428,47 @@ const CandidateDetails = () => {
                         </div>
 
                         {/* PDF CANVAS CONTAINER */}
-                        <div className="flex-1 overflow-auto bg-slate-950/80 rounded-xl p-4 flex justify-center items-start border border-slate-800/80 max-h-[700px]">
+                        <div className="flex-1 flex justify-center items-center bg-slate-950/60 rounded-xl border border-slate-800/80 p-2 overflow-auto max-h-[700px]">
                             {pdfUrl ? (
-                                !pdfError ? (
-                                    <Document
-                                        file={pdfUrl}
-                                        onLoadSuccess={onDocumentLoadSuccess}
-                                        onLoadError={onDocumentLoadError}
-                                        loading={
-                                            <div className="py-20 text-center text-slate-400 text-sm">
-                                                Loading PDF document...
-                                            </div>
-                                        }
-                                    >
-                                        <Page
-                                            pageNumber={pageNumber}
-                                            scale={scale}
-                                            renderTextLayer={true}
-                                            renderAnnotationLayer={true}
-                                        />
-                                    </Document>
-                                ) : (
-                                    <div className="w-full h-full flex flex-col p-4 space-y-3">
-                                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                            <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold">
-                                                <FileText className="w-4 h-4" />
-                                                Parsed Candidate Resume Content
-                                            </div>
-                                            <span className="text-[10px] text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md font-semibold">
-                                                Static File Wiped on Container Restart
-                                            </span>
+                                <Document
+                                    file={pdfUrl}
+                                    onLoadSuccess={onDocumentLoadSuccess}
+                                    onLoadError={onDocumentLoadError}
+                                    loading={
+                                        <div className="text-xs text-slate-400 py-12 flex flex-col items-center gap-2">
+                                            <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                            Rendering Resume Document...
                                         </div>
-                                        <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 text-slate-300 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-[550px] overflow-auto">
-                                            {resume.resumeText || "No raw resume text stored for this candidate."}
-                                        </div>
-                                    </div>
-                                )
+                                    }
+                                >
+                                    <Page
+                                        pageNumber={pageNumber}
+                                        scale={scale}
+                                        renderTextLayer={true}
+                                        renderAnnotationLayer={true}
+                                        className="shadow-2xl rounded"
+                                    />
+                                </Document>
                             ) : (
-                                <div className="py-20 text-center text-slate-500 text-sm">
-                                    No PDF file path associated with this candidate.
+                                <div className="text-center p-8 text-slate-500 text-xs">
+                                    PDF file path missing or unavailable.
                                 </div>
                             )}
                         </div>
-
                     </div>
 
                 </div>
 
             </div>
+
+            {/* INTERVIEW WEBRTC MODAL */}
+            <InterviewModal
+                isOpen={isInterviewOpen}
+                onClose={() => setIsInterviewOpen(false)}
+                candidate={resume}
+                exam={examData}
+                onUpdate={fetchExamData}
+            />
         </div>
     )
 }
