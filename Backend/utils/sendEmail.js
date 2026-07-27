@@ -27,7 +27,23 @@ const sendEmail = async ({ to, subject, html, text }) => {
         html
     }
 
-    // Attempt 1: Port 587 (STARTTLS)
+    // Attempt 1: Standard Nodemailer Gmail service (Recommended for Gmail)
+    try {
+        const transporterGmail = nodemailer.createTransport({
+            service: "gmail",
+            auth: { user: emailUser, pass: emailPass },
+            connectionTimeout: 15000,
+            socketTimeout: 15000
+        })
+
+        await transporterGmail.sendMail(mailOptions)
+        console.log(`[SECURE EMAIL SENT via Gmail Service] Verification code successfully emailed to ${to}`)
+        return
+    } catch (errGmail) {
+        console.warn(`[Gmail Service Attempt Failed]: ${errGmail.message}. Trying Port 587...`)
+    }
+
+    // Attempt 2: Port 587 (STARTTLS)
     try {
         const transporter587 = nodemailer.createTransport({
             host: "smtp.gmail.com",
@@ -36,9 +52,8 @@ const sendEmail = async ({ to, subject, html, text }) => {
             requireTLS: true,
             family: 4,
             auth: { user: emailUser, pass: emailPass },
-            connectionTimeout: 8000,
-            greetingTimeout: 5000,
-            socketTimeout: 8000
+            connectionTimeout: 15000,
+            socketTimeout: 15000
         })
 
         await transporter587.sendMail(mailOptions)
@@ -48,7 +63,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
         console.warn(`[Port 587 Attempt Failed]: ${err587.message}. Trying Port 465...`)
     }
 
-    // Attempt 2: Port 465 (SSL)
+    // Attempt 3: Port 465 (SSL)
     try {
         const transporter465 = nodemailer.createTransport({
             host: "smtp.gmail.com",
@@ -56,9 +71,8 @@ const sendEmail = async ({ to, subject, html, text }) => {
             secure: true,
             family: 4,
             auth: { user: emailUser, pass: emailPass },
-            connectionTimeout: 8000,
-            greetingTimeout: 5000,
-            socketTimeout: 8000
+            connectionTimeout: 15000,
+            socketTimeout: 15000
         })
 
         await transporter465.sendMail(mailOptions)
