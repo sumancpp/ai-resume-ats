@@ -3,6 +3,21 @@ import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import { useAuth } from "../context/AuthContext"
 import FolderManager from "./FolderManager"
+import {
+    Upload,
+    Search,
+    FileText,
+    Sparkles,
+    CheckCircle2,
+    X,
+    Loader2,
+    GraduationCap,
+    ArrowRight,
+    SlidersHorizontal,
+    AlertCircle,
+    FileWarning,
+    FolderPlus
+} from "lucide-react"
 
 const SearchResume = () => {
     const { token } = useAuth()
