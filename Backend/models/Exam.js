@@ -109,7 +109,6 @@ const examSchema = new mongoose.Schema({
     timestamps: true
 })
 
-examSchema.index({ token: 1 })
 examSchema.index({ candidateEmail: 1 })
 
 const Exam = mongoose.model("Exam", examSchema)
