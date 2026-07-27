@@ -5,6 +5,34 @@ if (dns.setDefaultResultOrder) {
     dns.setDefaultResultOrder("ipv4first")
 }
 
+let cachedTransporter = null
+
+const getTransporter = () => {
+    if (cachedTransporter) return cachedTransporter
+
+    const emailUser = process.env.EMAIL_USER?.trim()
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, "")
+
+    if (!emailUser || !emailPass) return null
+
+    cachedTransporter = nodemailer.createTransport({
+        service: "gmail",
+        pool: true, // Connection pooling for maximum speed
+        maxConnections: 5,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5,
+        auth: {
+            user: emailUser,
+            pass: emailPass
+        },
+        connectionTimeout: 10000,
+        socketTimeout: 10000
+    })
+
+    return cachedTransporter
+}
+
 const sendEmail = async ({ to, subject, html, text }) => {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         console.log(`\n======================================================`)
@@ -17,72 +45,44 @@ const sendEmail = async ({ to, subject, html, text }) => {
     }
 
     const emailUser = process.env.EMAIL_USER.trim()
-    const emailPass = process.env.EMAIL_PASS.replace(/\s+/g, "")
 
     const mailOptions = {
         from: `"TalentAI Security" <${emailUser}>`,
         to,
         subject,
         text,
-        html
+        html,
+        priority: "high"
     }
 
-    // Attempt 1: Standard Nodemailer Gmail service (Recommended for Gmail)
+    // 1. Primary: Fast Pooled Gmail Transporter
     try {
-        const transporterGmail = nodemailer.createTransport({
+        const transporter = getTransporter()
+        if (transporter) {
+            await transporter.sendMail(mailOptions)
+            console.log(`[ULTRA FAST EMAIL SENT] Verification code emailed to ${to}`)
+            return
+        }
+    } catch (errPool) {
+        console.warn(`[Pooled Transport Failed]: ${errPool.message}. Retrying direct transport...`)
+        cachedTransporter = null // reset pool on failure
+    }
+
+    // 2. Fallback Direct Transporter
+    try {
+        const emailPass = process.env.EMAIL_PASS.replace(/\s+/g, "")
+        const directTransporter = nodemailer.createTransport({
             service: "gmail",
-            auth: { user: emailUser, pass: emailPass },
-            connectionTimeout: 15000,
-            socketTimeout: 15000
+            auth: { user: emailUser, pass: emailPass }
         })
-
-        await transporterGmail.sendMail(mailOptions)
-        console.log(`[SECURE EMAIL SENT via Gmail Service] Verification code successfully emailed to ${to}`)
+        await directTransporter.sendMail(mailOptions)
+        console.log(`[DIRECT EMAIL SENT] Verification code emailed to ${to}`)
         return
-    } catch (errGmail) {
-        console.warn(`[Gmail Service Attempt Failed]: ${errGmail.message}. Trying Port 587...`)
-    }
-
-    // Attempt 2: Port 587 (STARTTLS)
-    try {
-        const transporter587 = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 587,
-            secure: false,
-            requireTLS: true,
-            family: 4,
-            auth: { user: emailUser, pass: emailPass },
-            connectionTimeout: 15000,
-            socketTimeout: 15000
-        })
-
-        await transporter587.sendMail(mailOptions)
-        console.log(`[SECURE EMAIL SENT via Port 587] Verification code successfully emailed to ${to}`)
-        return
-    } catch (err587) {
-        console.warn(`[Port 587 Attempt Failed]: ${err587.message}. Trying Port 465...`)
-    }
-
-    // Attempt 3: Port 465 (SSL)
-    try {
-        const transporter465 = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 465,
-            secure: true,
-            family: 4,
-            auth: { user: emailUser, pass: emailPass },
-            connectionTimeout: 15000,
-            socketTimeout: 15000
-        })
-
-        await transporter465.sendMail(mailOptions)
-        console.log(`[SECURE EMAIL SENT via Port 465] Verification code successfully emailed to ${to}`)
-        return
-    } catch (err465) {
-        console.error(`[Port 465 Attempt Failed]: ${err465.message}`)
+    } catch (errDirect) {
+        console.error(`[Email Dispatch Error]: ${errDirect.message}`)
         console.log(`\n======================================================`)
         console.log(`[SECURE SERVER LOG (ISP Block Fallback)] Code for ${to}: ${text}`)
-        console.log(`NOTE: Your local ISP/network is blocking outbound SMTP ports. When deployed on Render, real emails will be delivered directly!`)
+        console.log(`NOTE: Your local ISP/network is blocking outbound SMTP ports.`)
         console.log(`======================================================\n`)
     }
 }
