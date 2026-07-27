@@ -185,7 +185,7 @@ const SearchResume = () => {
             return
         }
 
-        const targetFolder = overrideFolderId !== undefined ? overrideFolderId : activeFolder
+        const targetFolder = (typeof overrideFolderId === "string") ? overrideFolderId : activeFolder
 
         try {
             setSearchLoading(true)

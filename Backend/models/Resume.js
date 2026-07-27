@@ -59,6 +59,7 @@ const resumeSchema = new mongoose.Schema({
 resumeSchema.index({ user: 1, fileHash: 1 })
 resumeSchema.index({ user: 1, folder: 1 })
 
-const Resume = mongoose.model("Resume", resumeSchema)
+// Drop legacy global fileHash_1 index if present in MongoDB
+Resume.collection.dropIndex("fileHash_1").catch(() => {})
 
 export default Resume

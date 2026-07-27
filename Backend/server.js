@@ -10,6 +10,7 @@ import fs from "fs"
 
 import pdf from "pdf-parse/lib/pdf-parse.js"
 
+import mongoose from "mongoose"
 import connectDB from "./config/db.js"
 import User from "./models/User.js"
 import Resume from "./models/Resume.js"
@@ -355,7 +356,7 @@ app.get("/search", protect, async (req, res) => {
         const normalizedQuery = normalizeText(rawQuery)
 
         const filter = { user: req.user._id }
-        if (folderId && folderId !== "all" && folderId !== "general") {
+        if (folderId && folderId !== "all" && folderId !== "general" && mongoose.Types.ObjectId.isValid(folderId)) {
             filter.folder = folderId
         } else if (folderId === "general") {
             filter.folder = null
@@ -433,7 +434,7 @@ app.get("/ai-search", protect, async (req, res) => {
         }
 
         const filter = { user: req.user._id }
-        if (folderId && folderId !== "all" && folderId !== "general") {
+        if (folderId && folderId !== "all" && folderId !== "general" && mongoose.Types.ObjectId.isValid(folderId)) {
             filter.folder = folderId
         } else if (folderId === "general") {
             filter.folder = null
