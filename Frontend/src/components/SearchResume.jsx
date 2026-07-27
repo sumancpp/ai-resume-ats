@@ -16,7 +16,11 @@ import {
     SlidersHorizontal,
     AlertCircle,
     FileWarning,
-    FolderPlus
+    FolderPlus,
+    Users,
+    Briefcase,
+    Zap,
+    Filter
 } from "lucide-react"
 
 const SearchResume = () => {
@@ -40,48 +44,42 @@ const SearchResume = () => {
     }
 
     const PRESET_QUERIES = [
-        "React Frontend Developer with UI/UX skills and modern JS",
-        "Python ML & Backend Developer with FastAPI & PyTorch",
-        "Full Stack Developer proficient in Node.js, Express & MongoDB",
-        "Software Engineer with high CGPA and strong algorithms"
+        "Python ML Developer",
+        "Full Stack Node & React",
+        "React Frontend Specialist",
+        "DevOps & Cloud Engineer",
+        "Cybersecurity Analyst"
     ]
 
     // =====================
     // STRICT FILE FILTER (PDF & DOCX ONLY)
     // =====================
     const filterValidFiles = (incomingFiles) => {
-        const valid = []
-        let invalidCount = 0
+        const validList = []
+        const rejectedNames = []
 
-        incomingFiles.forEach((file) => {
-            const ext = file.name.toLowerCase().slice(file.name.lastIndexOf("."))
-            const isPdf = file.type === "application/pdf" || ext === ".pdf"
-            const isDocx = file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || ext === ".docx"
-
-            if (isPdf || isDocx) {
-                valid.push(file)
+        Array.from(incomingFiles).forEach((file) => {
+            const ext = file.name.split(".").pop().toLowerCase()
+            if (ext === "pdf" || ext === "docx") {
+                validList.push(file)
             } else {
-                invalidCount++
+                rejectedNames.push(file.name)
             }
         })
 
-        if (invalidCount > 0) {
+        if (rejectedNames.length > 0) {
             setUploadStatus({
-                type: "error",
-                message: `${invalidCount} unsupported file(s) rejected! Only PDF (.pdf) and Word (.docx) resumes are allowed.`
+                type: "warning",
+                message: `Skipped ${rejectedNames.length} invalid file(s) (${rejectedNames.join(", ")}). Only PDF and DOCX documents are supported.`
             })
         }
 
-        return valid
+        return validList
     }
 
-    // =====================
-    // FILE DRAG & DROP HANDLERS
-    // =====================
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            const selectedFiles = Array.from(e.target.files)
-            const valid = filterValidFiles(selectedFiles)
+            const valid = filterValidFiles(e.target.files)
             setFiles((prev) => [...prev, ...valid])
         }
     }
@@ -91,7 +89,8 @@ const SearchResume = () => {
         setIsDragging(true)
     }
 
-    const handleDragLeave = () => {
+    const handleDragLeave = (e) => {
+        e.preventDefault()
         setIsDragging(false)
     }
 
@@ -99,8 +98,7 @@ const SearchResume = () => {
         e.preventDefault()
         setIsDragging(false)
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const droppedFiles = Array.from(e.dataTransfer.files)
-            const valid = filterValidFiles(droppedFiles)
+            const valid = filterValidFiles(e.dataTransfer.files)
             setFiles((prev) => [...prev, ...valid])
         }
     }
@@ -111,10 +109,11 @@ const SearchResume = () => {
 
     const clearAllFiles = () => {
         setFiles([])
+        setUploadStatus(null)
     }
 
     // =====================
-    // UPLOAD RESUMES (USER ISOLATED)
+    // UPLOAD RESUMES (PER USER & OPTIONAL FOLDER)
     // =====================
     const handleUpload = async () => {
         if (files.length === 0) {
@@ -130,7 +129,7 @@ const SearchResume = () => {
             for (let i = 0; i < files.length; i++) {
                 formData.append("resumes", files[i])
             }
-            if (activeFolder) {
+            if (activeFolder && activeFolder !== "all") {
                 formData.append("folderId", activeFolder)
             }
 
@@ -150,7 +149,7 @@ const SearchResume = () => {
 
             const { count, duplicatesSkipped, message } = response.data
 
-            let statusMsg = message || `Successfully indexed ${count} resume(s)!`
+            let statusMsg = message || `Successfully indexed ${count} candidate resume(s)!`
             if (duplicatesSkipped > 0) {
                 statusMsg += ` (${duplicatesSkipped} duplicate resume(s) skipped)`
             }
@@ -160,7 +159,6 @@ const SearchResume = () => {
                 message: statusMsg
             })
             setFiles([])
-            // Refresh search stats
             if (query.trim()) {
                 handleSearch()
             }
@@ -181,7 +179,7 @@ const SearchResume = () => {
     // =====================
     const handleSearch = async (overrideFolderId) => {
         if (!query.trim()) {
-            alert("Please enter a job requirement or skills query")
+            alert("Please enter a job requirement or technical skills query")
             return
         }
 
@@ -215,7 +213,7 @@ const SearchResume = () => {
             setTotalUserResumes(response.data.totalUserResumes ?? response.data.resumes?.length ?? 0)
         } catch (error) {
             console.error("Search error:", error)
-            alert("Semantic AI search failed. Please check your network connection.")
+            alert("AI Candidate Search failed. Please check your network connection.")
         } finally {
             setSearchLoading(false)
         }
@@ -230,36 +228,48 @@ const SearchResume = () => {
     }
 
     return (
-        <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 p-4 md:p-8 lg:p-12">
-            <div className="max-w-7xl mx-auto space-y-10">
+        <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white">
+            
+            {/* HERO BANNER SECTION */}
+            <div className="relative overflow-hidden bg-gradient-to-b from-slate-900/90 via-slate-950 to-slate-950 border-b border-slate-800/80 pt-10 pb-12 px-4 sm:px-6 lg:px-8">
+                {/* Background Ambient Glow */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-64 bg-indigo-600/10 blur-[120px] pointer-events-none rounded-full" />
+                
+                <div className="max-w-7xl mx-auto relative z-10 text-center space-y-6">
+                    {/* Badge */}
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold tracking-wide">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                        <span>AI Talent Discovery & Smart ATS</span>
+                    </div>
 
-                {/* HERO BANNER */}
-                <div className="relative rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800/80 p-8 md:p-12 shadow-2xl overflow-hidden">
-                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
-                    <div className="relative z-10 max-w-3xl space-y-4">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            Next-Gen Resume Screening Engine
+                    {/* Main Headline */}
+                    <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight max-w-4xl mx-auto">
+                        Find the Perfect Candidate in <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">Seconds</span>
+                    </h1>
+
+                    {/* Subtitle */}
+                    <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+                        Upload candidate resumes, organize candidate pools by target job roles, and search top talent using Gemini AI.
+                    </p>
+
+                    {/* Quick Stats Bar */}
+                    <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs">
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300">
+                            <Users className="w-4 h-4 text-indigo-400" />
+                            <span>Indexed Candidates: <strong className="text-white">{totalUserResumes !== null ? totalUserResumes : "Private Pool"}</strong></span>
                         </div>
-                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
-                            AI-Powered Candidate Matcher & ATS
-                        </h1>
-                        <p className="text-slate-400 text-base md:text-lg leading-relaxed">
-                            Upload candidate resumes to your private workspace, express job criteria in natural language, and let vector AI score and rank the best talent instantaneously.
-                        </p>
-                        <div className="flex flex-wrap items-center gap-4 pt-2">
-                            <button
-                                onClick={() => navigate("/dashboard")}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold border border-slate-700 transition-all duration-200"
-                            >
-                                <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
-                                Open Talent Analytics
-                            </button>
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300">
+                            <Zap className="w-4 h-4 text-emerald-400" />
+                            <span>Match Engine: <strong className="text-emerald-400">Gemini AI Grounded</strong></span>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* SECTION 0: FOLDER / JOB ROLE POOL MANAGER */}
+            {/* MAIN DASHBOARD CONTENT CONTAINER */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+                {/* JOB ROLE POOLS & FOLDERS NAV */}
                 <FolderManager
                     activeFolder={activeFolder}
                     setActiveFolder={setActiveFolder}
@@ -270,205 +280,183 @@ const SearchResume = () => {
                     }}
                 />
 
-                {/* SECTION 1: BULK RESUME UPLOAD AREA */}
-                <div className="bg-slate-900/80 border border-slate-800/90 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                {/* 2-COLUMN WORKSPACE GRID (UPLOAD + SEARCH) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    
+                    {/* LEFT COLUMN: RESUME INDEXING DROPZONE (5 cols) */}
+                    <div className="lg:col-span-5 bg-slate-900/70 border border-slate-800/80 rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-6">
                         <div>
-                            <h2 className="text-xl font-extrabold text-white flex items-center gap-2.5">
-                                <Upload className="w-5 h-5 text-indigo-400" />
-                                Upload Resumes to Your Workspace
-                            </h2>
-                            <p className="text-slate-400 text-xs sm:text-sm mt-0.5">
-                                Supported Formats: <span className="text-indigo-300 font-semibold">PDF (.pdf)</span> and <span className="text-indigo-300 font-semibold">Word (.docx)</span>. Duplicates auto-skipped.
-                            </p>
-                        </div>
-                        {files.length > 0 && (
-                            <button
-                                onClick={clearAllFiles}
-                                className="text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors"
+                            <div className="flex items-center justify-between mb-4 border-b border-slate-800/80 pb-3">
+                                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                                    <Upload className="w-4 h-4 text-indigo-400" />
+                                    Resume Upload
+                                </h2>
+                                <span className="text-[11px] text-slate-400 font-medium">PDF & DOCX</span>
+                            </div>
+
+                            {/* Dropzone Box */}
+                            <div
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                className={`relative border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
+                                    isDragging
+                                        ? "border-indigo-500 bg-indigo-600/10"
+                                        : "border-slate-800 bg-slate-950/60 hover:border-slate-700"
+                                }`}
                             >
-                                Clear All Selected ({files.length})
-                            </button>
-                        )}
-                    </div>
-
-                    {/* DROPZONE */}
-                    <div
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                        className={`relative border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-all duration-300 ${
-                            isDragging
-                                ? "border-indigo-500 bg-indigo-600/10 shadow-lg shadow-indigo-500/10"
-                                : "border-slate-800 bg-slate-950/60 hover:border-slate-700 hover:bg-slate-950/90"
-                        }`}
-                    >
-                        <input
-                            type="file"
-                            multiple
-                            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            onChange={handleFileChange}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                        <div className="flex flex-col items-center space-y-3 pointer-events-none">
-                            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shadow-inner">
-                                <Upload className="w-7 h-7" />
-                            </div>
-                            <div>
-                                <p className="text-base font-semibold text-white">
-                                    Drag & Drop PDF or DOCX Resumes Here
-                                </p>
-                                <p className="text-slate-400 text-xs mt-1">
-                                    or <span className="text-indigo-400 underline">browse files from your device</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* STATUS NOTIFICATION BANNER */}
-                    {uploadStatus && (
-                        <div
-                            className={`p-4 rounded-xl text-sm flex items-center justify-between border ${
-                                uploadStatus.type === "success"
-                                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                                    : uploadStatus.type === "warning"
-                                    ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
-                                    : "bg-rose-500/10 border-rose-500/20 text-rose-400"
-                            }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                {uploadStatus.type === "success" ? (
-                                    <CheckCircle2 className="w-5 h-5 shrink-0" />
-                                ) : (
-                                    <AlertCircle className="w-5 h-5 shrink-0" />
-                                )}
-                                <span>{uploadStatus.message}</span>
-                            </div>
-                            <button
-                                onClick={() => setUploadStatus(null)}
-                                className="p-1 hover:bg-slate-800 rounded-lg transition-colors"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                    )}
-
-                    {/* FILE PREVIEW GRID */}
-                    {files.length > 0 && (
-                        <div className="space-y-4 pt-2">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-56 overflow-y-auto pr-1">
-                                {files.map((file, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="flex items-center justify-between bg-slate-950 border border-slate-800/80 rounded-xl p-3 text-xs"
-                                    >
-                                        <div className="flex items-center space-x-3 overflow-hidden pr-2">
-                                            <FileText className="w-4 h-4 text-indigo-400 shrink-0" />
-                                            <div className="truncate">
-                                                <p className="font-semibold text-slate-200 truncate">{file.name}</p>
-                                                <p className="text-slate-500 text-[10px]">{formatFileSize(file.size)}</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => removeFile(idx)}
-                                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded transition-colors"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                    onChange={handleFileChange}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div className="flex flex-col items-center space-y-2 pointer-events-none">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
+                                        <Upload className="w-5 h-5" />
                                     </div>
-                                ))}
+                                    <div>
+                                        <p className="text-xs font-semibold text-white">Drag & Drop candidate resumes here</p>
+                                        <p className="text-[11px] text-slate-400 mt-0.5">or <span className="text-indigo-400 underline">browse device</span></p>
+                                    </div>
+                                </div>
                             </div>
 
-                            <button
-                                onClick={handleUpload}
-                                disabled={uploadLoading}
-                                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
-                            >
-                                {uploadLoading ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span>Parsing & Indexing Resumes...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload className="w-4 h-4" />
-                                        <span>Index {files.length} Selected Resume(s)</span>
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-                </div>
+                            {/* Selected Files List */}
+                            {files.length > 0 && (
+                                <div className="mt-4 space-y-2 max-h-36 overflow-y-auto pr-1">
+                                    <div className="flex items-center justify-between text-xs text-slate-400">
+                                        <span>Selected Files ({files.length}):</span>
+                                        <button onClick={clearAllFiles} className="text-rose-400 hover:underline">Clear</button>
+                                    </div>
+                                    {files.map((file, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+                                            <div className="flex items-center gap-2 truncate">
+                                                <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                                <span className="truncate text-slate-200">{file.name}</span>
+                                            </div>
+                                            <button onClick={() => removeFile(idx)} className="text-slate-500 hover:text-rose-400 p-1">
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
-                {/* SECTION 2: SEMANTIC AI SEARCH INPUT */}
-                <div className="bg-slate-900/80 border border-slate-800/90 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
-                    <div>
-                        <h2 className="text-xl font-extrabold text-white flex items-center gap-2.5">
-                            <Search className="w-5 h-5 text-indigo-400" />
-                            Ask AI / Search Your Uploaded Resumes
-                        </h2>
-                        <p className="text-slate-400 text-xs sm:text-sm mt-0.5">
-                            Describe required skills, degree, experience, or role. Vector AI searches only your workspace candidate files.
-                        </p>
-                    </div>
-
-                    {/* SEARCH INPUT BAR */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="relative flex-1">
-                            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                            <input
-                                type="text"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                                placeholder="e.g. Senior Full Stack Developer proficient in React, Node.js and MongoDB with 8+ CGPA"
-                                className="w-full pl-12 pr-4 py-4 bg-slate-950/80 border border-slate-800 rounded-2xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
-                            />
+                            {/* Status Banners */}
+                            {uploadStatus && (
+                                <div className={`mt-4 p-3 rounded-xl text-xs border ${
+                                    uploadStatus.type === "success"
+                                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                                        : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                                }`}>
+                                    {uploadStatus.message}
+                                </div>
+                            )}
                         </div>
+
+                        {/* Upload Trigger Button */}
                         <button
-                            onClick={handleSearch}
-                            disabled={searchLoading}
-                            className="py-4 px-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50 shrink-0"
+                            onClick={handleUpload}
+                            disabled={uploadLoading || files.length === 0}
+                            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/25 transition disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            {searchLoading ? (
+                            {uploadLoading ? (
                                 <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    <span>Matching...</span>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Parsing & Indexing Resumes...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Sparkles className="w-4 h-4" />
-                                    <span>Ask Vector AI</span>
+                                    <Upload className="w-4 h-4" />
+                                    <span>Index {files.length > 0 ? `${files.length} File(s)` : "Resumes"}</span>
                                 </>
                             )}
                         </button>
                     </div>
 
-                    {/* PRESET PROMPTS */}
-                    <div className="space-y-2 pt-1">
-                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                            Try Quick Candidate Prompts:
-                        </span>
-                        <div className="flex flex-wrap gap-2">
-                            {PRESET_QUERIES.map((preset, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => {
-                                        setQuery(preset)
+                    {/* RIGHT COLUMN: AI SEARCH BAR & PRESETS (7 cols) */}
+                    <div className="lg:col-span-7 bg-slate-900/70 border border-slate-800/80 rounded-3xl p-6 shadow-xl space-y-6 flex flex-col justify-between">
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                                    <Search className="w-4 h-4 text-indigo-400" />
+                                    AI Candidate Search
+                                </h2>
+                                <span className="text-[11px] text-slate-400">Natural Language Engine</span>
+                            </div>
+
+                            {/* Search Box Input */}
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Python ML Developer with FastAPI, PyTorch & 8+ CGPA"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleSearch()
                                     }}
-                                    className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-indigo-500/40 text-slate-300 hover:text-white text-xs font-medium transition-all"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-11 pr-24 py-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                                />
+                                {query && (
+                                    <button
+                                        onClick={() => setQuery("")}
+                                        className="absolute right-24 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs px-2 py-1"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => handleSearch()}
+                                    disabled={searchLoading}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition disabled:opacity-50 flex items-center gap-1.5"
                                 >
-                                    {preset}
+                                    {searchLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                                    <span>Search</span>
                                 </button>
-                            ))}
+                            </div>
+
+                            {/* Preset Pills */}
+                            <div className="space-y-2 pt-1">
+                                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                                    Suggested Candidate Prompts:
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    {PRESET_QUERIES.map((preset, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => {
+                                                setQuery(preset)
+                                                handleSearch()
+                                            }}
+                                            className="px-3 py-1 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/40 text-slate-300 hover:text-white text-xs font-medium transition"
+                                        >
+                                            {preset}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quick Analytics Bar CTA */}
+                        <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                            <span className="text-slate-400">Want deeper candidate skill analytics?</span>
+                            <button
+                                onClick={() => navigate("/dashboard")}
+                                className="text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 transition"
+                            >
+                                Open Analytics <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                {/* SECTION 3: SEARCH RESULTS & CANDIDATE RANKINGS */}
-                <div className="space-y-6 pt-2">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+                {/* CANDIDATE RANKINGS SECTION */}
+                <div className="space-y-6 pt-4">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
                             <span>Candidate Rankings</span>
                             {resumes.length > 0 && (
                                 <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold">
@@ -481,41 +469,28 @@ const SearchResume = () => {
                     {searchLoading ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {[1, 2, 3].map((n) => (
-                                <div
-                                    key={n}
-                                    className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4 animate-pulse"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="w-32 h-6 bg-slate-800 rounded"></div>
-                                        <div className="w-16 h-6 bg-slate-800 rounded-full"></div>
+                                <div key={n} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4 animate-pulse">
+                                    <div className="flex justify-between items-center">
+                                        <div className="w-32 h-5 bg-slate-800 rounded" />
+                                        <div className="w-12 h-6 bg-slate-800 rounded-full" />
                                     </div>
-                                    <div className="w-24 h-4 bg-slate-800/60 rounded"></div>
-                                    <div className="w-full h-16 bg-slate-800/40 rounded-xl"></div>
+                                    <div className="w-24 h-4 bg-slate-800/60 rounded" />
+                                    <div className="w-full h-14 bg-slate-800/40 rounded-xl" />
                                 </div>
                             ))}
                         </div>
                     ) : resumes.length === 0 ? (
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-12 text-center space-y-4 max-w-2xl mx-auto">
-                            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
-                                {totalUserResumes === 0 ? (
-                                    <FolderPlus className="w-8 h-8 text-indigo-400" />
-                                ) : (
-                                    <Search className="w-8 h-8 text-indigo-400" />
-                                )}
+                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto">
+                            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+                                <Search className="w-6 h-6" />
                             </div>
-                            <h3 className="text-xl font-bold text-white">
-                                {totalUserResumes === 0
-                                    ? "No Resumes Uploaded Yet"
-                                    : searchAttempted
-                                    ? "No Candidate Matches Found"
-                                    : "Search Your Resumes"}
+                            <h3 className="text-base font-bold text-white">
+                                {searchAttempted ? "No Matching Candidates Found" : "Search Your Candidates"}
                             </h3>
-                            <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
-                                {totalUserResumes === 0
-                                    ? "Please upload candidate resumes (PDF or DOCX) in the section above. TalentAI will parse and isolate them in your private workspace for instant AI vector search!"
-                                    : searchAttempted
-                                    ? `No candidates in your workspace matched "${query}". Try searching for broader technical skills or roles.`
-                                    : "Enter a job requirement prompt above or click a preset prompt to view AI-ranked candidates."}
+                            <p className="text-slate-400 text-xs max-w-md mx-auto leading-relaxed">
+                                {searchAttempted
+                                    ? `No candidates in your workspace matched "${query}". Try searching for specific technical skills like Python, React, Java, or Node.js.`
+                                    : "Enter a job requirement prompt above or click a suggested prompt to view ranked candidates."}
                             </p>
                         </div>
                     ) : (
@@ -524,71 +499,63 @@ const SearchResume = () => {
                                 <div
                                     key={resume._id}
                                     onClick={() => navigate("/candidate", { state: resume })}
-                                    className="group bg-slate-900/80 hover:bg-slate-900 border border-slate-800/90 hover:border-indigo-500/40 rounded-2xl p-6 shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+                                    className="group bg-slate-900/80 hover:bg-slate-900 border border-slate-800/90 hover:border-indigo-500/40 rounded-2xl p-6 shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer"
                                 >
                                     <div>
-                                        {/* HEADER: NAME + SCORE */}
-                                        <div className="flex items-start justify-between gap-3 mb-4">
+                                        {/* HEADER: AVATAR + NAME + SCORE */}
+                                        <div className="flex items-start justify-between gap-3 mb-3">
                                             <div className="flex items-center space-x-3">
-                                                <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white font-bold text-base flex items-center justify-center shadow-md shrink-0">
+                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white font-bold text-sm flex items-center justify-center shadow-md shrink-0">
                                                     {resume.name ? resume.name.charAt(0).toUpperCase() : "C"}
                                                 </div>
-                                                <div>
-                                                    <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors line-clamp-1">
+                                                <div className="truncate">
+                                                    <h3 className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors truncate">
                                                         {resume.name || "Candidate Profile"}
                                                     </h3>
-                                                    <div className="flex items-center space-x-1 text-slate-400 text-xs mt-0.5">
-                                                        <GraduationCap className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                                                        <span className="truncate max-w-[140px]">{resume.college || "University Graduate"}</span>
+                                                    <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
+                                                        <GraduationCap className="w-3 h-3 text-indigo-400 shrink-0" />
+                                                        <span className="truncate">{resume.college || "Graduate"}</span>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            {/* MATCH SCORE BADGE */}
-                                            <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold text-sm shadow-inner shrink-0">
+                                            {/* SCORE BADGE */}
+                                            <div className="px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold text-xs shrink-0">
                                                 {resume.score ? `${resume.score}` : "N/A"}
                                             </div>
                                         </div>
 
-                                        {/* FOLDER & ROLE CATEGORY BADGES */}
-                                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                                        {/* FOLDER & ROLE BADGES */}
+                                        <div className="flex flex-wrap items-center gap-1.5 mb-3">
                                             {resume.folder?.name && (
-                                                <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[11px] font-semibold flex items-center gap-1">
+                                                <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-semibold flex items-center gap-1">
                                                     📁 {resume.folder.name}
                                                 </span>
                                             )}
                                             {resume.roleCategory && (
-                                                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-semibold">
+                                                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
                                                     🏷️ {resume.roleCategory}
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* AI REASON CALLOUT */}
-                                        <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3.5 mb-4 text-xs space-y-1">
-                                            <div className="flex items-center gap-1.5 text-indigo-400 font-semibold mb-1">
-                                                <Sparkles className="w-3.5 h-3.5" />
-                                                AI Match Insight
+                                        <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 mb-3 text-xs space-y-1">
+                                            <div className="flex items-center gap-1 text-indigo-400 font-semibold text-[11px]">
+                                                <Sparkles className="w-3 h-3" />
+                                                AI Insight
                                             </div>
-                                            <p className="text-slate-300 leading-relaxed line-clamp-3">
-                                                {resume.reason || "Matched based on technical keyword alignment and background skills."}
+                                            <p className="text-slate-300 text-[11px] leading-relaxed line-clamp-2">
+                                                {resume.reason || "Matched based on technical skills and domain alignment."}
                                             </p>
                                         </div>
 
-                                        {/* CGPA */}
-                                        <div className="flex items-center justify-between text-xs mb-4 px-1">
-                                            <span className="text-slate-400 font-medium">Academic CGPA</span>
-                                            <span className="px-2.5 py-1 rounded-md bg-indigo-950/60 border border-indigo-800/40 text-indigo-300 font-bold">
-                                                {resume.cgpa ? `${resume.cgpa}` : "N/A"}
-                                            </span>
-                                        </div>
-
-                                        {/* SKILLS */}
-                                        <div className="flex flex-wrap gap-1.5 mb-6">
-                                            {resume.skills?.map((skill, index) => (
+                                        {/* SKILLS CHIPS */}
+                                        <div className="flex flex-wrap gap-1 mb-4">
+                                            {resume.skills?.slice(0, 6).map((skill, index) => (
                                                 <span
                                                     key={index}
-                                                    className="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs font-medium"
+                                                    className="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-300 text-[11px] font-medium"
                                                 >
                                                     {skill}
                                                 </span>
@@ -596,10 +563,10 @@ const SearchResume = () => {
                                         </div>
                                     </div>
 
-                                    {/* CARD FOOTER */}
-                                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-indigo-400 group-hover:text-indigo-300">
-                                        <span>View Full Profile & PDF</span>
-                                        <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                                    {/* FOOTER CTA */}
+                                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 group-hover:text-indigo-400 transition">
+                                        <span>View Full Profile</span>
+                                        <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition" />
                                     </div>
                                 </div>
                             ))}
