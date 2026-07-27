@@ -269,16 +269,19 @@ const CandidateDetails = () => {
                                         />
                                     </Document>
                                 ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center py-16 space-y-4 text-center">
-                                        <FileText className="w-12 h-12 text-slate-600" />
-                                        <p className="text-slate-300 text-sm font-semibold">
-                                            Browser PDF viewer fallback active
-                                        </p>
-                                        <iframe
-                                            src={pdfUrl}
-                                            title="Candidate Resume"
-                                            className="w-full h-[550px] rounded-xl border border-slate-800"
-                                        />
+                                    <div className="w-full h-full flex flex-col p-4 space-y-3">
+                                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                                            <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold">
+                                                <FileText className="w-4 h-4" />
+                                                Parsed Candidate Resume Content
+                                            </div>
+                                            <span className="text-[10px] text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md font-semibold">
+                                                Static File Wiped on Container Restart
+                                            </span>
+                                        </div>
+                                        <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 text-slate-300 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-[550px] overflow-auto">
+                                            {resume.resumeText || "No raw resume text stored for this candidate."}
+                                        </div>
                                     </div>
                                 )
                             ) : (

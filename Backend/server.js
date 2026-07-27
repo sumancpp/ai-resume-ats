@@ -417,6 +417,16 @@ const STOP_WORDS = new Set([
     "role", "position", "having", "who", "has", "is", "are", "at", "by", "from"
 ])
 
+const hasExactWordMatch = (text, term) => {
+    if (!text || !term) return false
+    if (term.length <= 3) {
+        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        const regex = new RegExp(`(?:^|[^a-zA-Z0-9_])${escaped}(?:$|[^a-zA-Z0-9_])`, "i")
+        return regex.test(text)
+    }
+    return text.includes(term)
+}
+
 // =====================
 // AI SEARCH (DOMAIN & FOLDER-INTELLIGENT ATS SEARCH ENGINE)
 // =====================
@@ -456,7 +466,7 @@ app.get("/ai-search", protect, async (req, res) => {
         const targetClusters = []
         Object.keys(TECH_CLUSTERS).forEach((clusterKey) => {
             const clusterTerms = TECH_CLUSTERS[clusterKey]
-            const isClusterRequested = clusterTerms.some((term) => userQueryLower.includes(term))
+            const isClusterRequested = clusterTerms.some((term) => hasExactWordMatch(userQueryLower, term))
             if (isClusterRequested) {
                 targetClusters.push(clusterKey)
             }
@@ -488,7 +498,7 @@ app.get("/ai-search", protect, async (req, res) => {
             targetClusters.forEach((clusterKey) => {
                 const terms = TECH_CLUSTERS[clusterKey]
                 const candidateHasClusterTech = terms.some((term) => {
-                    return resumeSkillsLower.some((s) => s.includes(term) || term.includes(s)) || fullTextLower.includes(term)
+                    return resumeSkillsLower.some((s) => hasExactWordMatch(s, term)) || hasExactWordMatch(fullTextLower, term)
                 })
 
                 if (candidateHasClusterTech) {
@@ -509,12 +519,12 @@ app.get("/ai-search", protect, async (req, res) => {
                 let matchedInText = false
 
                 resumeSkillsLower.forEach((skill) => {
-                    if (skill.includes(keyword) || keyword.includes(skill)) {
+                    if (hasExactWordMatch(skill, keyword)) {
                         matchedInSkills = true
                     }
                 })
 
-                if (fullTextLower.includes(keyword)) {
+                if (hasExactWordMatch(fullTextLower, keyword)) {
                     matchedInText = true
                 }
 
