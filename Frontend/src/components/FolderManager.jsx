@@ -13,7 +13,7 @@ const COLOR_OPTIONS = [
     { name: "rose", bg: "bg-rose-500/10", border: "border-rose-500/30", text: "text-rose-400", activeBg: "bg-rose-600", dot: "bg-rose-500" }
 ]
 
-const FolderManager = ({ activeFolder, setActiveFolder, onFolderChange }) => {
+const FolderManager = ({ activeFolder, setActiveFolder, onFolderChange, refreshKey }) => {
     const [folders, setFolders] = useState([])
     const [totalResumes, setTotalResumes] = useState(0)
     const [unassignedCount, setUnassignedCount] = useState(0)
@@ -56,7 +56,7 @@ const FolderManager = ({ activeFolder, setActiveFolder, onFolderChange }) => {
 
     useEffect(() => {
         fetchFolders()
-    }, [])
+    }, [refreshKey])
 
     const handleCreateFolder = async (e) => {
         e.preventDefault()

@@ -37,6 +37,7 @@ const SearchResume = () => {
     const [searchLoading, setSearchLoading] = useState(false)
     const [searchAttempted, setSearchAttempted] = useState(false)
     const [uploadStatus, setUploadStatus] = useState(null)
+    const [refreshFolderKey, setRefreshFolderKey] = useState(0)
 
     const navigate = useNavigate()
 
@@ -51,6 +52,57 @@ const SearchResume = () => {
         "DevOps & Cloud Engineer",
         "Cybersecurity Analyst"
     ]
+
+    // =====================
+    // REAL-TIME CANDIDATE FETCH & REFRESH
+    // =====================
+    const fetchCandidates = async (searchQuery = query, overrideFolderId = activeFolder) => {
+        const activeQuery = (typeof searchQuery === "string" ? searchQuery : query).trim()
+        const targetFolder = (typeof overrideFolderId === "string") ? overrideFolderId : activeFolder
+
+        try {
+            setSearchLoading(true)
+            setSearchAttempted(true)
+
+            const headers = { Authorization: `Bearer ${token}` }
+            let response
+
+            if (activeQuery) {
+                const url = getApiUrl("/ai-search")
+                response = await axios.get(url, {
+                    params: { query: activeQuery, folderId: targetFolder },
+                    headers
+                })
+            } else {
+                const url = getApiUrl("/search")
+                response = await axios.get(url, {
+                    params: { query: "", folderId: targetFolder },
+                    headers
+                })
+            }
+
+            setResumes(response.data.resumes || [])
+            setTotalUserResumes(response.data.totalUserResumes ?? response.data.resumes?.length ?? 0)
+        } catch (error) {
+            console.error("Fetch candidates error:", error)
+        } finally {
+            setSearchLoading(false)
+        }
+    }
+
+    // Auto-fetch candidates in real-time whenever active folder or auth token changes
+    useEffect(() => {
+        let interval = null
+        if (token) {
+            fetchCandidates(query, activeFolder)
+            interval = setInterval(() => {
+                fetchCandidates(query, activeFolder)
+            }, 6000)
+        }
+        return () => {
+            if (interval) clearInterval(interval)
+        }
+    }, [token, activeFolder])
 
     // =====================
     // STRICT FILE FILTER (PDF & DOCX ONLY)
@@ -114,7 +166,7 @@ const SearchResume = () => {
     }
 
     // =====================
-    // UPLOAD RESUMES (PER USER & OPTIONAL FOLDER)
+    // UPLOAD RESUMES (REAL-TIME INSTANT UPDATE)
     // =====================
     const handleUpload = async () => {
         if (files.length === 0) {
@@ -151,9 +203,10 @@ const SearchResume = () => {
                 message: statusMsg
             })
             setFiles([])
-            if (query.trim()) {
-                handleSearch()
-            }
+
+            // Real-time update candidate list & folder badges without page refresh!
+            await fetchCandidates(query, activeFolder)
+            setRefreshFolderKey((prev) => prev + 1)
         } catch (error) {
             console.error("Upload error:", error)
             const errMsg = error.response?.data?.message || "Failed to upload resumes. Only PDF and DOCX documents are accepted."
@@ -170,34 +223,7 @@ const SearchResume = () => {
     // SEMANTIC AI SEARCH (USER & FOLDER ISOLATED)
     // =====================
     const handleSearch = async (searchQuery, overrideFolderId) => {
-        const activeQuery = (typeof searchQuery === "string" ? searchQuery : query).trim()
-        if (!activeQuery) {
-            alert("Please enter a job requirement or technical skills query")
-            return
-        }
-
-        const targetFolder = (typeof overrideFolderId === "string") ? overrideFolderId : activeFolder
-
-        try {
-            setSearchLoading(true)
-            setSearchAttempted(true)
-
-            const url = getApiUrl("/ai-search")
-            const headers = { Authorization: `Bearer ${token}` }
-
-            const response = await axios.get(url, {
-                params: { query: activeQuery, folderId: targetFolder },
-                headers
-            })
-
-            setResumes(response.data.resumes || [])
-            setTotalUserResumes(response.data.totalUserResumes ?? response.data.resumes?.length ?? 0)
-        } catch (error) {
-            console.error("Search error:", error)
-            alert("AI Candidate Search failed. Please check your network connection.")
-        } finally {
-            setSearchLoading(false)
-        }
+        fetchCandidates(searchQuery, overrideFolderId)
     }
 
     const formatFileSize = (bytes) => {
@@ -254,10 +280,9 @@ const SearchResume = () => {
                 <FolderManager
                     activeFolder={activeFolder}
                     setActiveFolder={setActiveFolder}
+                    refreshKey={refreshFolderKey}
                     onFolderChange={(folderId) => {
-                        if (query.trim()) {
-                            handleSearch(folderId)
-                        }
+                        fetchCandidates(query, folderId)
                     }}
                 />
 

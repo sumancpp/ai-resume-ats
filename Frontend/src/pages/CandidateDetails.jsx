@@ -72,8 +72,15 @@ const CandidateDetails = () => {
     }, [candidateEmail, resume?.resumeText])
 
     useEffect(() => {
+        let interval = null
         if (resume?._id) {
             fetchExamData()
+            interval = setInterval(() => {
+                fetchExamData()
+            }, 5000)
+        }
+        return () => {
+            if (interval) clearInterval(interval)
         }
     }, [resume?._id])
 
@@ -85,8 +92,14 @@ const CandidateDetails = () => {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
-            if (res.data.success) {
+            if (res.data.success && res.data.exam) {
                 setExamData(res.data.exam)
+                setResume((prev) => ({
+                    ...prev,
+                    examStatus: res.data.exam.status,
+                    examScore: res.data.exam.score,
+                    interviewStatus: res.data.exam.interviewStatus || prev.interviewStatus
+                }))
             }
         } catch (err) {
             // Exam record not generated yet

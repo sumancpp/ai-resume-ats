@@ -629,10 +629,59 @@ app.get("/stats", protect, async (req, res) => {
 })
 
 // =====================
-// START SERVER
+// WEBRTC SIGNALING & SOCKET.IO SERVER
+// =====================
+import http from "http"
+import { Server } from "socket.io"
+
+const server = http.createServer(app)
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+})
+
+io.on("connection", (socket) => {
+    console.log("WebRTC Socket connected:", socket.id)
+
+    socket.on("join-interview-room", ({ roomId, userRole, userName }) => {
+        socket.join(roomId)
+        console.log(`[Interview Room ${roomId}] ${userName} (${userRole}) connected`)
+        socket.to(roomId).emit("user-joined", { socketId: socket.id, userRole, userName })
+    })
+
+    socket.on("webrtc-offer", ({ roomId, offer }) => {
+        socket.to(roomId).emit("webrtc-offer", { offer, senderId: socket.id })
+    })
+
+    socket.on("webrtc-answer", ({ roomId, answer }) => {
+        socket.to(roomId).emit("webrtc-answer", { answer, senderId: socket.id })
+    })
+
+    socket.on("ice-candidate", ({ roomId, candidate }) => {
+        socket.to(roomId).emit("ice-candidate", { candidate, senderId: socket.id })
+    })
+
+    socket.on("screen-share-status", ({ roomId, isSharing, userRole }) => {
+        socket.to(roomId).emit("screen-share-status", { isSharing, userRole, senderId: socket.id })
+    })
+
+    socket.on("leave-interview-room", ({ roomId }) => {
+        socket.leave(roomId)
+        socket.to(roomId).emit("user-left", { socketId: socket.id })
+    })
+
+    socket.on("disconnect", () => {
+        console.log("Socket disconnected:", socket.id)
+    })
+})
+
+// =====================
+// START SERVER WITH SOCKET.IO
 // =====================
 const PORT = process.env.PORT || 5000
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
+server.listen(PORT, () => {
+    console.log(`Server & WebRTC Socket.io running on port ${PORT}`)
 })
