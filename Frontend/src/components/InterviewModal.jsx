@@ -162,15 +162,15 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                         </div>
                     )}
 
-                    {/* GOOGLE MEET ENTRY STAGE CARD */}
-                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 text-center space-y-4 shadow-inner">
-                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto shadow-md">
-                            <Video className="w-7 h-7" />
+                    {/* INSTANT WORKING VIDEO ROOM CARD */}
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 text-center space-y-4 shadow-inner">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto shadow-md">
+                            <Video className="w-6 h-6" />
                         </div>
                         <div>
-                            <h4 className="text-base font-bold text-white mb-1">Instant Google Meet Meeting Room</h4>
+                            <h4 className="text-base font-bold text-white mb-1">Instant Live Video Interview Room</h4>
                             <p className="text-xs text-slate-400">
-                                Both candidate and HR join this exact room. Candidate is restricted to their verified email: <strong>{candidate?.email}</strong>.
+                                100% Working Live Video Room for HR and Candidate (<strong className="text-emerald-300">{candidate?.email}</strong>).
                             </p>
                         </div>
 
@@ -178,10 +178,10 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                             href={meetLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer"
+                            className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer"
                         >
                             <ExternalLink className="w-4 h-4" />
-                            Join Google Meet Interview Room Now
+                            Join Live Video Interview Room Now
                         </a>
                     </div>
 

@@ -453,25 +453,18 @@ export const sendConfirmation = async (req, res) => {
     }
 }
 
-const generateGoogleMeetLink = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyz"
-    const getRandomSegment = (len) => {
-        let seg = ""
-        for (let i = 0; i < len; i++) {
-            seg += chars.charAt(Math.floor(Math.random() * chars.length))
-        }
-        return seg
-    }
-    return `https://meet.google.com/${getRandomSegment(3)}-${getRandomSegment(4)}-${getRandomSegment(3)}`
+const generateInstantMeetLink = (token) => {
+    const cleanToken = token ? token.slice(0, 12) : crypto.randomBytes(6).toString("hex")
+    return `https://meet.jit.si/TalentAI-Interview-${cleanToken}`
 }
 
 /**
- * Send / Resend Google Meet Video Interview Email & Join Link to Candidate
+ * Send / Resend Live Video Interview Email & Join Link to Candidate
  */
 export const sendVideoInterviewInvite = async (req, res) => {
     try {
         const { resumeId } = req.params
-        const { candidateEmail, isResend } = req.body
+        const { candidateEmail, customMeetUrl, isResend } = req.body
 
         const resume = await Resume.findOne({ _id: resumeId, user: req.user._id })
         if (!resume) {
@@ -502,7 +495,7 @@ export const sendVideoInterviewInvite = async (req, res) => {
 
         const interviewToken = crypto.randomBytes(24).toString("hex")
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // Strict 5 minutes validity
-        const meetLink = exam.meetLink || generateGoogleMeetLink()
+        const meetLink = customMeetUrl?.trim() || generateInstantMeetLink(interviewToken)
 
         exam.meetLink = meetLink
         exam.interviewToken = interviewToken
