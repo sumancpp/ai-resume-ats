@@ -115,9 +115,10 @@ const CandidateDetails = () => {
     }
 
     const backendBase = getBackendUrl()
-    const pdfUrl = resume.filePath
-        ? `${backendBase}/${resume.filePath.replace(/^\//, "")}`
+    const cleanFilePath = resume.filePath
+        ? resume.filePath.replace(/\\/g, "/").replace(/^\//, "")
         : null
+    const pdfUrl = cleanFilePath ? `${backendBase}/${cleanFilePath}` : null
 
     const onDocumentLoadSuccess = ({ numPages }) => {
         setNumPages(numPages)
@@ -127,7 +128,6 @@ const CandidateDetails = () => {
     const onDocumentLoadError = (err) => {
         console.error("PDF Load Error:", err)
         setPdfError(true)
-        setViewMode("native")
     }
 
     const handleToggleShortlist = async () => {
@@ -536,7 +536,29 @@ const CandidateDetails = () => {
                         {/* PDF DISPLAY CONTAINER */}
                         <div className="flex-1 flex justify-center items-center bg-slate-950/80 rounded-2xl border border-slate-800/80 p-2 overflow-auto min-h-[550px] max-h-[750px]">
                             {pdfUrl ? (
-                                viewMode === "canvas" && !pdfError ? (
+                                pdfError ? (
+                                    <div className="text-center p-8 max-w-md bg-slate-900 border border-slate-800 rounded-2xl space-y-4 shadow-xl">
+                                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto">
+                                            <FileText className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-white mb-1">Resume File Missing on Server (404)</h4>
+                                            <p className="text-xs text-slate-400 leading-relaxed mb-2">
+                                                The file <code className="text-indigo-300 font-mono text-[11px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">{cleanFilePath}</code> was not found on backend storage.
+                                            </p>
+                                            <p className="text-[11px] text-slate-500">
+                                                This occurs when old database records refer to files deleted during a server restart. Re-uploading this candidate's CV will fix this.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => navigate("/")}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-600/30"
+                                        >
+                                            <ArrowLeft className="w-3.5 h-3.5" />
+                                            Back to Upload / Resume Matcher
+                                        </button>
+                                    </div>
+                                ) : viewMode === "canvas" ? (
                                     <Document
                                         file={pdfUrl}
                                         onLoadSuccess={onDocumentLoadSuccess}

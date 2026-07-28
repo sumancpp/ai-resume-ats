@@ -47,9 +47,13 @@ app.use("/api/auth", authRoutes)
 app.use("/api/exams", examRoutes)
 
 // =====================
-// STATIC UPLOADS
+// STATIC UPLOADS WITH CORS HEADERS
 // =====================
-app.use("/uploads", express.static("uploads"))
+app.use("/uploads", (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*")
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
+    next()
+}, express.static(path.resolve("uploads")))
 
 // =====================
 // CLEAN PDF TEXT
