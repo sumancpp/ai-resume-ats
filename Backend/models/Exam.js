@@ -108,6 +108,18 @@ const examSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    meetLink: {
+        type: String,
+        default: null
+    },
+    candidateJoined: {
+        type: Boolean,
+        default: false
+    },
+    candidateJoinedAt: {
+        type: Date,
+        default: null
+    },
     hiringStatus: {
         type: String,
         enum: ["pending", "passed", "rejected"],

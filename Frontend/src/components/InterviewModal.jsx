@@ -15,285 +15,53 @@ import {
     Award,
     Sparkles,
     Send,
-    Maximize2,
+    ExternalLink,
     ShieldCheck,
-    PhoneOff
+    BellRing,
+    Copy
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
 
-const ICE_SERVERS = {
-    iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:19302" }
-    ]
-}
-
 export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpdate }) {
     const [cameraActive, setCameraActive] = useState(false)
     const [micActive, setMicActive] = useState(false)
-    const [isScreenSharing, setIsScreenSharing] = useState(false)
-    const [remotePeerConnected, setRemotePeerConnected] = useState(false)
-    const [swapView, setSwapView] = useState(false)
     const [interviewNotes, setInterviewNotes] = useState("")
     const [submitting, setSubmitting] = useState(false)
+    const [candidateWaitingInMeet, setCandidateWaitingInMeet] = useState(exam?.candidateJoined || false)
 
-    const [localStream, setLocalStream] = useState(null)
-    const [remoteStream, setRemoteStream] = useState(null)
-
-    const localVideoRef = useRef(null)
-    const remoteVideoRef = useRef(null)
-
-    const localStreamRef = useRef(null)
-    const screenStreamRef = useRef(null)
-    const peerConnectionRef = useRef(null)
     const socketRef = useRef(null)
-
     const roomId = exam?.interviewToken || candidate?.interviewToken || candidate?._id
+    const meetLink = exam?.meetLink || candidate?.meetLink || `https://meet.google.com`
 
     useEffect(() => {
-        if (isOpen) {
-            startSession()
-        } else {
-            stopSession()
-        }
-        return () => stopSession()
-    }, [isOpen, roomId])
+        if (isOpen && roomId) {
+            const backendUrl = getBackendUrl()
+            const socket = io(backendUrl)
+            socketRef.current = socket
 
-    useEffect(() => {
-        if (isOpen && localVideoRef.current && localStream) {
-            localVideoRef.current.srcObject = localStream
-        }
-    }, [isOpen, localStream, swapView])
-
-    useEffect(() => {
-        if (isOpen && remoteVideoRef.current && remoteStream) {
-            remoteVideoRef.current.srcObject = remoteStream
-        }
-    }, [isOpen, remoteStream, remotePeerConnected, swapView])
-
-    const startSession = async () => {
-        try {
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true
-            })
-            localStreamRef.current = mediaStream
-            setLocalStream(mediaStream)
-            setCameraActive(true)
-            setMicActive(true)
-
-            // Connect to Socket.io WebRTC signaling server
-            if (roomId) {
-                const backendUrl = getBackendUrl()
-                const socket = io(backendUrl)
-                socketRef.current = socket
-
-                socket.on("connect", () => {
-                    console.log("HR connected to WebRTC signaling:", socket.id)
-                    socket.emit("join-interview-room", {
-                        roomId,
-                        userRole: "hr",
-                        userName: "HR Evaluator"
-                    })
-                })
-
-                socket.on("user-joined", async ({ userRole }) => {
-                    console.log("Candidate joined interview room:", userRole)
-                    setRemotePeerConnected(true)
-                    await createWebRTCOffer()
-                })
-
-                socket.on("webrtc-offer", async ({ offer }) => {
-                    console.log("Received WebRTC offer from Candidate")
-                    setRemotePeerConnected(true)
-                    await handleWebRTCOffer(offer)
-                })
-
-                socket.on("webrtc-answer", async ({ answer }) => {
-                    console.log("Received WebRTC answer from Candidate")
-                    if (peerConnectionRef.current) {
-                        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer))
-                    }
-                })
-
-                socket.on("ice-candidate", async ({ candidate }) => {
-                    if (peerConnectionRef.current && candidate) {
-                        try {
-                            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
-                        } catch (err) {
-                            console.error("Error adding ICE candidate:", err)
-                        }
-                    }
-                })
-
-                socket.on("user-left", () => {
-                    setRemotePeerConnected(false)
-                    if (remoteVideoRef.current) {
-                        remoteVideoRef.current.srcObject = null
-                    }
-                })
-            }
-        } catch (err) {
-            console.warn("HR Camera/Mic access denied:", err)
-        }
-    }
-
-    const getOrCreatePeerConnection = () => {
-        if (peerConnectionRef.current) return peerConnectionRef.current
-
-        const pc = new RTCPeerConnection(ICE_SERVERS)
-        peerConnectionRef.current = pc
-
-        if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach((track) => {
-                pc.addTrack(track, localStreamRef.current)
-            })
-        }
-
-        pc.ontrack = (event) => {
-            console.log("HR received remote candidate stream track")
-            setRemotePeerConnected(true)
-            if (event.streams[0]) {
-                setRemoteStream(event.streams[0])
-                if (remoteVideoRef.current) {
-                    remoteVideoRef.current.srcObject = event.streams[0]
-                }
-            }
-        }
-
-        pc.onicecandidate = (event) => {
-            if (event.candidate && socketRef.current) {
-                socketRef.current.emit("ice-candidate", {
-                    roomId,
-                    candidate: event.candidate
-                })
-            }
-        }
-
-        return pc
-    }
-
-    const createWebRTCOffer = async () => {
-        const pc = getOrCreatePeerConnection()
-        const offer = await pc.createOffer()
-        await pc.setLocalDescription(offer)
-
-        if (socketRef.current) {
-            socketRef.current.emit("webrtc-offer", { roomId, offer })
-        }
-    }
-
-    const handleWebRTCOffer = async (offer) => {
-        const pc = getOrCreatePeerConnection()
-        await pc.setRemoteDescription(new RTCSessionDescription(offer))
-        const answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-
-        if (socketRef.current) {
-            socketRef.current.emit("webrtc-answer", { roomId, answer })
-        }
-    }
-
-    const toggleCamera = () => {
-        if (localStreamRef.current) {
-            const videoTrack = localStreamRef.current.getVideoTracks()[0]
-            if (videoTrack) {
-                videoTrack.enabled = !videoTrack.enabled
-                setCameraActive(videoTrack.enabled)
-            }
-        }
-    }
-
-    const toggleMic = () => {
-        if (localStreamRef.current) {
-            const audioTrack = localStreamRef.current.getAudioTracks()[0]
-            if (audioTrack) {
-                audioTrack.enabled = !audioTrack.enabled
-                setMicActive(audioTrack.enabled)
-            }
-        }
-    }
-
-    const toggleScreenShare = async () => {
-        if (!isScreenSharing) {
-            try {
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: true,
-                    audio: true
-                })
-                const screenTrack = screenStream.getVideoTracks()[0]
-
-                if (peerConnectionRef.current) {
-                    const senders = peerConnectionRef.current.getSenders()
-                    const videoSender = senders.find((s) => s.track && s.track.kind === "video")
-                    if (videoSender) {
-                        videoSender.replaceTrack(screenTrack)
-                    }
-                }
-
-                screenTrack.onended = () => {
-                    stopScreenShare()
-                }
-
-                screenStreamRef.current = screenStream
-                setIsScreenSharing(true)
-
-                if (socketRef.current) {
-                    socketRef.current.emit("screen-share-status", {
-                        roomId,
-                        isSharing: true,
-                        userRole: "hr"
-                    })
-                }
-            } catch (err) {
-                console.error("HR Screen share error:", err)
-            }
-        } else {
-            stopScreenShare()
-        }
-    }
-
-    const stopScreenShare = () => {
-        if (screenStreamRef.current) {
-            screenStreamRef.current.getTracks().forEach((t) => t.stop())
-            screenStreamRef.current = null
-        }
-        if (localStreamRef.current && peerConnectionRef.current) {
-            const camTrack = localStreamRef.current.getVideoTracks()[0]
-            const senders = peerConnectionRef.current.getSenders()
-            const videoSender = senders.find((s) => s.track && s.track.kind === "video")
-            if (videoSender && camTrack) {
-                videoSender.replaceTrack(camTrack)
-            }
-        }
-        setIsScreenSharing(false)
-        if (socketRef.current) {
-            socketRef.current.emit("screen-share-status", {
+            socket.emit("join-interview-room", {
                 roomId,
-                isSharing: false,
-                userRole: "hr"
+                userRole: "hr",
+                userName: "HR Evaluator"
+            })
+
+            socket.on("candidate-waiting-in-meet", ({ candidateName }) => {
+                setCandidateWaitingInMeet(true)
+            })
+
+            socket.on("user-joined", () => {
+                setCandidateWaitingInMeet(true)
             })
         }
-    }
 
-    const stopSession = () => {
-        stopScreenShare()
-        if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach((t) => t.stop())
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect()
+                socketRef.current = null
+            }
         }
-        if (peerConnectionRef.current) {
-            peerConnectionRef.current.close()
-            peerConnectionRef.current = null
-        }
-        if (socketRef.current) {
-            socketRef.current.emit("leave-interview-room", { roomId })
-            socketRef.current.disconnect()
-            socketRef.current = null
-        }
-        setRemotePeerConnected(false)
-    }
+    }, [isOpen, roomId])
 
     const handleUpdateStatus = async (status) => {
         if (!exam?._id) return
@@ -351,7 +119,7 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
 
     return (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-6xl w-full p-4 sm:p-6 shadow-2xl relative flex flex-col lg:flex-row gap-6 max-h-[95vh] overflow-y-auto my-auto">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl relative flex flex-col md:flex-row gap-6 max-h-[95vh] overflow-y-auto my-auto">
                 
                 <button
                     onClick={onClose}
@@ -360,115 +128,85 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                     <X className="w-5 h-5" />
                 </button>
 
-                {/* LEFT COLUMN: BIG STAGE WEBRTC VIDEO STREAM (60% WIDTH ON LG) */}
-                <div className="w-full lg:w-7/12 flex flex-col justify-between space-y-4">
+                {/* LEFT COLUMN: GOOGLE MEET JOIN STAGE & NOTIFICATION */}
+                <div className="w-full md:w-1/2 flex flex-col justify-between space-y-4">
                     <div>
                         <h3 className="text-lg sm:text-xl font-extrabold text-white flex items-center gap-2 mb-1">
-                            <Video className="w-5 h-5 text-indigo-400" />
-                            HR Live WebRTC Interview Room
+                            <Video className="w-5 h-5 text-emerald-400" />
+                            HR Google Meet Evaluation Console
                         </h3>
                         <p className="text-xs text-slate-400">
-                            Candidate: <strong className="text-white">{candidate?.name}</strong> ({candidate?.roleCategory})
+                            Candidate: <strong className="text-white">{candidate?.name}</strong> ({candidate?.roleCategory || "Software Engineer"})
                         </p>
                     </div>
 
-                    {/* BIGGER VIDEO STAGE WITH PiP */}
-                    <div className="relative w-full aspect-video bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center min-h-[300px] sm:min-h-[380px]">
-                        
-                        {/* MAIN VIDEO STREAM: CANDIDATE (OR SWAPPED HR STREAM) */}
-                        <video
-                            ref={swapView ? localVideoRef : remoteVideoRef}
-                            autoPlay
-                            playsInline
-                            muted={swapView}
-                            className="w-full h-full object-cover"
-                        />
-
-                        {!remotePeerConnected && !swapView && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-3 bg-slate-950/90 backdrop-blur-sm z-10">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center animate-pulse">
-                                    <Video className="w-6 h-6" />
-                                </div>
-                                <h4 className="text-sm font-bold text-white">Candidate Has Not Joined Yet</h4>
-                                <p className="text-xs text-slate-400 max-w-xs">
-                                    When the candidate opens their 5-minute email join link, live video and screen sharing will stream here instantly.
+                    {/* LIVE CANDIDATE WAITING ALERT NOTIFICATION BANNER */}
+                    {candidateWaitingInMeet ? (
+                        <div className="bg-emerald-500/10 border-2 border-emerald-500/40 rounded-2xl p-4 flex items-center gap-3 animate-pulse shadow-lg shadow-emerald-500/10">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                                <BellRing className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wider">Candidate Waiting in Google Meet!</h4>
+                                <p className="text-xs text-emerald-200 mt-0.5">
+                                    <strong>{candidate?.name}</strong> has joined the Google Meet session. Click below to enter the meeting.
                                 </p>
                             </div>
-                        )}
+                        </div>
+                    ) : (
+                        <div className="bg-indigo-950/40 border border-indigo-800/40 rounded-2xl p-4 flex items-center gap-3">
+                            <ShieldCheck className="w-6 h-6 text-indigo-400 shrink-0" />
+                            <p className="text-xs text-slate-300">
+                                Verified Google Meet room active. When the candidate enters using their email, a live alert will sound here.
+                            </p>
+                        </div>
+                    )}
 
-                        {/* STATUS BADGES */}
-                        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-slate-950/80 backdrop-blur-md border border-slate-800 px-3 py-1 rounded-full text-xs font-semibold text-white">
-                            <span className={`w-2.5 h-2.5 rounded-full ${remotePeerConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-400"}`}></span>
-                            <span>{remotePeerConnected ? "Candidate Live" : "Waiting for Candidate"}</span>
+                    {/* GOOGLE MEET ENTRY STAGE CARD */}
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 text-center space-y-4 shadow-inner">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto shadow-md">
+                            <Video className="w-7 h-7" />
+                        </div>
+                        <div>
+                            <h4 className="text-base font-bold text-white mb-1">Instant Google Meet Meeting Room</h4>
+                            <p className="text-xs text-slate-400">
+                                Both candidate and HR join this exact room. Candidate is restricted to their verified email: <strong>{candidate?.email}</strong>.
+                            </p>
                         </div>
 
-                        {isScreenSharing && (
-                            <div className="absolute top-3 right-12 z-20 bg-indigo-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1">
-                                <Monitor className="w-3.5 h-3.5" />
-                                Sharing Screen
-                            </div>
-                        )}
-
-                        {/* FLOATING SELF VIEW PiP (SWAPPABLE) */}
-                        <div className="absolute bottom-3 right-3 z-20 group cursor-pointer" onClick={() => setSwapView(!swapView)} title="Click to swap views">
-                            <div className="relative w-28 h-20 sm:w-36 sm:h-28 bg-slate-900 rounded-xl overflow-hidden border-2 border-indigo-500/80 shadow-2xl transition-transform group-hover:scale-105">
-                                <video
-                                    ref={swapView ? remoteVideoRef : localVideoRef}
-                                    autoPlay
-                                    playsInline
-                                    muted={!swapView}
-                                    className="w-full h-full object-cover"
-                                />
-                                <div className="absolute bottom-1 left-1.5 bg-slate-950/80 text-[10px] font-bold text-slate-200 px-1.5 py-0.5 rounded backdrop-blur-sm">
-                                    {swapView ? "Candidate" : "HR (You)"}
-                                </div>
-                            </div>
-                        </div>
-
+                        <a
+                            href={meetLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                            Join Google Meet Interview Room Now
+                        </a>
                     </div>
 
-                    {/* CONTROL ACTION BAR */}
-                    <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={toggleCamera}
-                                className={`p-2.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${cameraActive ? "bg-slate-800 border-slate-700 text-white" : "bg-rose-500/20 border-rose-500/40 text-rose-300"}`}
-                            >
-                                {cameraActive ? <Video className="w-4 h-4 text-emerald-400" /> : <VideoOff className="w-4 h-4" />}
-                                <span className="hidden sm:inline">{cameraActive ? "Cam On" : "Cam Off"}</span>
-                            </button>
-
-                            <button
-                                onClick={toggleMic}
-                                className={`p-2.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${micActive ? "bg-slate-800 border-slate-700 text-white" : "bg-rose-500/20 border-rose-500/40 text-rose-300"}`}
-                            >
-                                {micActive ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4" />}
-                                <span className="hidden sm:inline">{micActive ? "Mic On" : "Mic Off"}</span>
-                            </button>
-
-                            <button
-                                onClick={toggleScreenShare}
-                                className={`p-2.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${isScreenSharing ? "bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/30" : "bg-slate-800 border-slate-700 text-slate-300"}`}
-                            >
-                                {isScreenSharing ? <MonitorOff className="w-4 h-4" /> : <Monitor className="w-4 h-4 text-indigo-400" />}
-                                <span>{isScreenSharing ? "Stop Screen Share" : "Share Screen"}</span>
-                            </button>
+                    {/* EXAM SCORE SUMMARY BADGE */}
+                    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Award className="w-7 h-7 text-indigo-400" />
+                            <div>
+                                <span className="text-[11px] text-slate-400 block font-semibold uppercase">Exam Score</span>
+                                <span className="text-base font-bold text-white">{exam?.score ?? "N/A"}%</span>
+                            </div>
                         </div>
 
-                        {/* EXAM SCORE BADGE */}
-                        <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
-                            <Award className="w-4 h-4 text-indigo-400" />
-                            <span className="text-xs font-bold text-white">Test Score: {exam?.score ?? "N/A"}%</span>
-                        </div>
+                        <span className={`px-3 py-1 text-xs font-bold rounded-full ${exam?.score >= 50 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"}`}>
+                            {exam?.score >= 50 ? "PASSED ASSESSMENT" : "NEEDS REVIEW"}
+                        </span>
                     </div>
                 </div>
 
-                {/* RIGHT COLUMN: HR EVALUATION NOTES & DECISION PANEL (40% WIDTH ON LG) */}
-                <div className="w-full lg:w-5/12 flex flex-col justify-between space-y-4">
+                {/* RIGHT COLUMN: HR NOTES & SELECTION OFFER DECISION PANEL */}
+                <div className="w-full md:w-1/2 flex flex-col justify-between space-y-4">
                     <div className="space-y-4">
                         <h4 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                             <Sparkles className="w-4 h-4 text-indigo-400" />
-                            HR Evaluation & Notes
+                            HR Interview Notes & Evaluation
                         </h4>
 
                         {exam?.aiFeedback && (
@@ -482,35 +220,34 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                             value={interviewNotes}
                             onChange={(e) => setInterviewNotes(e.target.value)}
                             rows={4}
-                            placeholder="Enter interviewer feedback, technical impressions, live coding review..."
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                            placeholder="Enter interviewer feedback, technical impressions, communication rating..."
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
                         />
 
-                        {roomId && (
-                            <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2 text-xs">
-                                <span className="text-slate-400 font-semibold block">Candidate 5-Min Join Link:</span>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={`${window.location.origin}/interview/${roomId}`}
-                                        className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-indigo-300 truncate"
-                                    />
-                                    <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(`${window.location.origin}/interview/${roomId}`)
-                                            alert("Candidate interview join link copied to clipboard!")
-                                        }}
-                                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] cursor-pointer"
-                                    >
-                                        Copy Link
-                                    </button>
-                                </div>
+                        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2 text-xs">
+                            <span className="text-slate-400 font-semibold block">Google Meet Room Link:</span>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={meetLink}
+                                    className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-emerald-300 truncate font-mono"
+                                />
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(meetLink)
+                                        alert("Google Meet link copied to clipboard!")
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] cursor-pointer flex items-center gap-1"
+                                >
+                                    <Copy className="w-3 h-3" />
+                                    Copy
+                                </button>
                             </div>
-                        )}
+                        </div>
                     </div>
 
-                    {/* DECISION ACTION BUTTONS */}
+                    {/* FINAL SELECTION DECISION BUTTONS */}
                     <div className="space-y-3 pt-2 border-t border-slate-800">
                         <div className="grid grid-cols-2 gap-3">
                             <button

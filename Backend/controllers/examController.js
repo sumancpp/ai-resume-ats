@@ -453,8 +453,20 @@ export const sendConfirmation = async (req, res) => {
     }
 }
 
+const generateGoogleMeetLink = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyz"
+    const getRandomSegment = (len) => {
+        let seg = ""
+        for (let i = 0; i < len; i++) {
+            seg += chars.charAt(Math.floor(Math.random() * chars.length))
+        }
+        return seg
+    }
+    return `https://meet.google.com/${getRandomSegment(3)}-${getRandomSegment(4)}-${getRandomSegment(3)}`
+}
+
 /**
- * Send / Resend Video Interview Email & Join Link to Candidate
+ * Send / Resend Google Meet Video Interview Email & Join Link to Candidate
  */
 export const sendVideoInterviewInvite = async (req, res) => {
     try {
@@ -490,10 +502,13 @@ export const sendVideoInterviewInvite = async (req, res) => {
 
         const interviewToken = crypto.randomBytes(24).toString("hex")
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // Strict 5 minutes validity
+        const meetLink = exam.meetLink || generateGoogleMeetLink()
 
+        exam.meetLink = meetLink
         exam.interviewToken = interviewToken
         exam.interviewExpiresAt = expiresAt
         exam.interviewStatus = "invited"
+        exam.candidateJoined = false
         await exam.save()
 
         resume.latestExam = exam._id
@@ -508,6 +523,7 @@ export const sendVideoInterviewInvite = async (req, res) => {
             to: emailToSend,
             candidateName: resume.name || "Candidate",
             interviewLink,
+            meetLink,
             expiresAt,
             isResend: Boolean(isResend)
         })
@@ -516,10 +532,11 @@ export const sendVideoInterviewInvite = async (req, res) => {
             success: true,
             interviewToken,
             interviewLink,
+            meetLink,
             expiresAt,
             message: isResend 
-                ? `Updated 5-minute video interview join link emailed to ${emailToSend}!`
-                : `5-Minute Video interview join link emailed to ${emailToSend}! Candidate must join within 5 minutes.`
+                ? `Updated Google Meet join link emailed to ${emailToSend}!`
+                : `Instant Google Meet join link emailed to ${emailToSend}! Candidate must join within 5 minutes.`
         })
     } catch (error) {
         console.error("Send video interview invite error:", error)
@@ -553,11 +570,51 @@ export const verifyInterviewToken = async (req, res) => {
             candidateEmail: exam.candidateEmail,
             roleCategory: exam.resume?.roleCategory || "Software Engineer",
             interviewStatus: exam.interviewStatus,
-            expiresAt: exam.interviewExpiresAt
+            expiresAt: exam.interviewExpiresAt,
+            meetLink: exam.meetLink,
+            candidateJoined: exam.candidateJoined,
+            candidateJoinedAt: exam.candidateJoinedAt
         })
     } catch (error) {
         console.error("Verify interview token error:", error)
         res.status(500).json({ success: false, message: "Error verifying interview join link" })
+    }
+}
+
+/**
+ * Candidate Verify Email & Register Google Meet Join Event
+ */
+export const notifyCandidateJoinedMeet = async (req, res) => {
+    try {
+        const { token } = req.params
+        const { email } = req.body
+
+        const exam = await Exam.findOne({ interviewToken: token })
+        if (!exam) {
+            return res.status(404).json({ success: false, message: "Interview session not found" })
+        }
+
+        // Email Verification check
+        if (email && email.toLowerCase().trim() !== exam.candidateEmail.toLowerCase().trim()) {
+            return res.status(403).json({
+                success: false,
+                message: `Email mismatch! You must join using your registered candidate email address: ${exam.candidateEmail}`
+            })
+        }
+
+        exam.candidateJoined = true
+        exam.candidateJoinedAt = new Date()
+        await exam.save()
+
+        res.json({
+            success: true,
+            meetLink: exam.meetLink,
+            candidateEmail: exam.candidateEmail,
+            message: "Candidate email verified! Joining Google Meet session."
+        })
+    } catch (error) {
+        console.error("Candidate joined meet error:", error)
+        res.status(500).json({ success: false, message: "Error verifying candidate email for Google Meet" })
     }
 }
 

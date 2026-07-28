@@ -12,7 +12,8 @@ import {
     updateInterviewStatus,
     sendConfirmation,
     sendVideoInterviewInvite,
-    verifyInterviewToken
+    verifyInterviewToken,
+    notifyCandidateJoinedMeet
 } from "../controllers/examController.js"
 
 const router = express.Router()
@@ -25,6 +26,7 @@ router.post("/start/:token", startExam)
 router.post("/run-code", runCodeTest)
 router.post("/submit/:token", submitExam)
 router.get("/interview-verify/:token", verifyInterviewToken)
+router.post("/candidate-joined-meet/:token", notifyCandidateJoinedMeet)
 
 // ===================================
 // PROTECTED HR DASHBOARD ROUTES

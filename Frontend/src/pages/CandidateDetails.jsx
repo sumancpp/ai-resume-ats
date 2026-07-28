@@ -341,20 +341,20 @@ const CandidateDetails = () => {
                                     <button
                                         onClick={() => handleSendVideoInterviewInvite(false)}
                                         disabled={sendingInterviewInvite}
-                                        className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-violet-600/20 transition-all"
+                                        className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-emerald-600/20 transition-all"
                                     >
-                                        <Video className="w-4 h-4 text-violet-200" />
-                                        {sendingInterviewInvite ? "Sending Interview Link..." : "Email 5-Min Video Interview Join Link"}
+                                        <Video className="w-4 h-4 text-emerald-200" />
+                                        {sendingInterviewInvite ? "Sending Meet Link..." : "Email Instant Google Meet Link"}
                                     </button>
 
                                     {/* 3. RESEND / GENERATE NEW INTERVIEW LINK */}
                                     <button
                                         onClick={() => handleSendVideoInterviewInvite(true)}
                                         disabled={sendingInterviewInvite}
-                                        className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-violet-300 border border-violet-500/30 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
+                                        className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-500/30 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
                                     >
-                                        <RefreshCw className="w-3.5 h-3.5 text-violet-400" />
-                                        Resend / Generate New 5-Min Join Link
+                                        <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+                                        Resend / Generate New Google Meet Link
                                     </button>
 
                                     {/* 4. LAUNCH HR INTERVIEW ROOM MODAL */}
