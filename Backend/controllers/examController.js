@@ -369,7 +369,7 @@ export const getExamByResumeId = async (req, res) => {
         const exam = await Exam.findOne({ resume: resumeId }).sort({ createdAt: -1 })
 
         if (!exam) {
-            return res.status(404).json({ success: false, message: "No exam records found for candidate" })
+            return res.json({ success: true, exam: null, message: "No exam records found for candidate" })
         }
 
         res.json({

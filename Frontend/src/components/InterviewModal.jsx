@@ -39,6 +39,9 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
     const [interviewNotes, setInterviewNotes] = useState("")
     const [submitting, setSubmitting] = useState(false)
 
+    const [localStream, setLocalStream] = useState(null)
+    const [remoteStream, setRemoteStream] = useState(null)
+
     const localVideoRef = useRef(null)
     const remoteVideoRef = useRef(null)
 
@@ -58,6 +61,18 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
         return () => stopSession()
     }, [isOpen, roomId])
 
+    useEffect(() => {
+        if (isOpen && localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream
+        }
+    }, [isOpen, localStream, swapView])
+
+    useEffect(() => {
+        if (isOpen && remoteVideoRef.current && remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream
+        }
+    }, [isOpen, remoteStream, remotePeerConnected, swapView])
+
     const startSession = async () => {
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -65,12 +80,9 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                 audio: true
             })
             localStreamRef.current = mediaStream
+            setLocalStream(mediaStream)
             setCameraActive(true)
             setMicActive(true)
-
-            if (localVideoRef.current) {
-                localVideoRef.current.srcObject = mediaStream
-            }
 
             // Connect to Socket.io WebRTC signaling server
             if (roomId) {
@@ -143,8 +155,11 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
         pc.ontrack = (event) => {
             console.log("HR received remote candidate stream track")
             setRemotePeerConnected(true)
-            if (remoteVideoRef.current && event.streams[0]) {
-                remoteVideoRef.current.srcObject = event.streams[0]
+            if (event.streams[0]) {
+                setRemoteStream(event.streams[0])
+                if (remoteVideoRef.current) {
+                    remoteVideoRef.current.srcObject = event.streams[0]
+                }
             }
         }
 

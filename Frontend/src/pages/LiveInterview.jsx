@@ -48,6 +48,8 @@ export default function LiveInterview() {
     const [remotePeerConnected, setRemotePeerConnected] = useState(false)
     const [joinedRoom, setJoinedRoom] = useState(false)
     const [swapView, setSwapView] = useState(false) // Swap main and PiP streams
+    const [localStream, setLocalStream] = useState(null)
+    const [remoteStream, setRemoteStream] = useState(null)
 
     const localVideoRef = useRef(null)
     const remoteVideoRef = useRef(null)
@@ -63,6 +65,19 @@ export default function LiveInterview() {
             leaveSession()
         }
     }, [token])
+
+    // Bind media streams to Video Elements as soon as DOM mounts
+    useEffect(() => {
+        if (!loading && localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream
+        }
+    }, [loading, localStream, swapView, joinedRoom])
+
+    useEffect(() => {
+        if (!loading && remoteVideoRef.current && remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream
+        }
+    }, [loading, remoteStream, remotePeerConnected, swapView])
 
     // Countdown Timer Effect
     useEffect(() => {
@@ -128,12 +143,9 @@ export default function LiveInterview() {
                 audio: true
             })
             localStreamRef.current = mediaStream
+            setLocalStream(mediaStream)
             setCameraActive(true)
             setMicActive(true)
-
-            if (localVideoRef.current) {
-                localVideoRef.current.srcObject = mediaStream
-            }
         } catch (err) {
             console.warn("Camera/Mic permission warning:", err)
         }
@@ -213,8 +225,11 @@ export default function LiveInterview() {
         pc.ontrack = (event) => {
             console.log("Candidate received remote stream track")
             setRemotePeerConnected(true)
-            if (remoteVideoRef.current && event.streams[0]) {
-                remoteVideoRef.current.srcObject = event.streams[0]
+            if (event.streams[0]) {
+                setRemoteStream(event.streams[0])
+                if (remoteVideoRef.current) {
+                    remoteVideoRef.current.srcObject = event.streams[0]
+                }
             }
         }
 

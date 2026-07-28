@@ -53,13 +53,7 @@ const Dashboard = () => {
     useEffect(() => {
         let isMounted = true
         fetchDashboardData(isMounted)
-        const interval = setInterval(() => {
-            fetchDashboardData(isMounted)
-        }, 5000)
-        return () => {
-            isMounted = false
-            clearInterval(interval)
-        }
+        return () => { isMounted = false }
     }, [])
 
     const fetchDashboardData = async (isMounted = true) => {

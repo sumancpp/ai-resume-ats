@@ -54,11 +54,18 @@ const SearchResume = () => {
     ]
 
     // =====================
-    // REAL-TIME CANDIDATE FETCH & REFRESH
+    // CANDIDATE FETCH (ONLY ON SEARCH OR SPECIFIC FOLDER SELECTION)
     // =====================
     const fetchCandidates = async (searchQuery = query, overrideFolderId = activeFolder) => {
         const activeQuery = (typeof searchQuery === "string" ? searchQuery : query).trim()
         const targetFolder = (typeof overrideFolderId === "string") ? overrideFolderId : activeFolder
+
+        // If no query typed and in "All Candidates" pool, do not list candidates automatically
+        if (!activeQuery && targetFolder === "all") {
+            setResumes([])
+            setSearchAttempted(false)
+            return
+        }
 
         try {
             setSearchLoading(true)
@@ -90,17 +97,12 @@ const SearchResume = () => {
         }
     }
 
-    // Auto-fetch candidates in real-time whenever active folder or auth token changes
+    // Fetch candidates when selecting a specific job folder tab
     useEffect(() => {
-        let interval = null
-        if (token) {
+        if (token && activeFolder !== "all") {
             fetchCandidates(query, activeFolder)
-            interval = setInterval(() => {
-                fetchCandidates(query, activeFolder)
-            }, 6000)
-        }
-        return () => {
-            if (interval) clearInterval(interval)
+        } else if (token && activeFolder === "all" && query.trim()) {
+            fetchCandidates(query, activeFolder)
         }
     }, [token, activeFolder])
 

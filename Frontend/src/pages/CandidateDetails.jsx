@@ -72,15 +72,8 @@ const CandidateDetails = () => {
     }, [candidateEmail, resume?.resumeText])
 
     useEffect(() => {
-        let interval = null
         if (resume?._id) {
             fetchExamData()
-            interval = setInterval(() => {
-                fetchExamData()
-            }, 5000)
-        }
-        return () => {
-            if (interval) clearInterval(interval)
         }
     }, [resume?._id])
 
