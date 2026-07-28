@@ -211,5 +211,54 @@ export const sendHiringConfirmationEmail = async ({ to, candidateName = "Candida
     return await sendEmail({ to, subject, html, text })
 }
 
+export const sendVideoInterviewInviteEmail = async ({ to, candidateName = "Candidate", interviewLink, expiresAt, isResend = false }) => {
+    const formattedDate = new Date(expiresAt).toLocaleString()
+    const subject = isResend 
+        ? "📹 Updated Invitation: Live Video & Technical Interview Round - TalentAI"
+        : "📹 Invitation: Live Video & Technical Interview Round - TalentAI"
+
+    const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0f172a; border-radius: 12px; padding: 32px; color: #f8fafc; border: 1px solid #334155;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #818cf8; margin: 0; font-size: 28px; font-weight: 800;">TalentAI Video Interview</h1>
+            <p style="color: #94a3b8; font-size: 14px; margin-top: 4px;">Live Candidate Assessment Round</p>
+        </div>
+
+        <p style="font-size: 16px; color: #e2e8f0; line-height: 1.6;">Dear <strong>${candidateName}</strong>,</p>
+
+        <p style="font-size: 16px; color: #e2e8f0; line-height: 1.6;">
+            ${isResend 
+                ? "Here is your <strong>new updated join link</strong> for your Live Video & Technical Interview Round." 
+                : "You have been invited to participate in the <strong>Live Video & Technical Interview Round</strong> with our evaluation team."}
+        </p>
+
+        <div style="background-color: #1e293b; border-left: 4px solid #f43f5e; border-radius: 6px; padding: 18px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #fb7185; font-size: 16px;">⏱️ URGENT: 5-Minute Joining Window</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #cbd5e1; font-size: 14px; line-height: 1.8;">
+                <li><strong style="color: #f43f5e;">Strict 5-Minute Expiry:</strong> You must click the join button below and enter the room within <strong>5 minutes</strong> (Valid until: <em>${formattedDate}</em>). After 5 minutes, this link will become invalid.</li>
+                <li><strong>Browser Access:</strong> Open in Chrome, Firefox, or Safari with Camera & Microphone enabled.</li>
+                <li><strong>Environment:</strong> Ensure a quiet environment and stable internet connection.</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${interviewLink}" target="_blank" style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);">
+                🎥 Join Live Video Interview Room
+            </a>
+        </div>
+
+        <p style="font-size: 13px; color: #64748b; text-align: center; margin-top: 24px;">If the button above does not work, copy and paste this link into your browser:<br><a href="${interviewLink}" style="color: #818cf8; word-break: break-all;">${interviewLink}</a></p>
+
+        <hr style="border: 0; border-top: 1px solid #334155; margin: 32px 0 16px 0;">
+        <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">© TalentAI ATS Recruitment Platform. All rights reserved.</p>
+    </div>
+    `
+
+    const text = `Dear ${candidateName},\n\nJoin your Live Video Interview here:\n${interviewLink}\n\nLink valid until: ${formattedDate}\n\nBest regards,\nTalentAI Team`
+
+    return await sendEmail({ to, subject, html, text })
+}
+
 export default sendEmail
+
 

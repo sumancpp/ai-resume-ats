@@ -227,10 +227,33 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                         <textarea
                             value={interviewNotes}
                             onChange={(e) => setInterviewNotes(e.target.value)}
-                            rows={5}
+                            rows={4}
                             placeholder="Enter interviewer feedback, technical impressions, communication score..."
                             className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
                         />
+
+                        {exam?.interviewToken && (
+                            <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2 text-xs">
+                                <span className="text-slate-400 font-semibold block">Candidate Join Link:</span>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={`${window.location.origin}/interview/${exam.interviewToken}`}
+                                        className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-indigo-300 truncate"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(`${window.location.origin}/interview/${exam.interviewToken}`)
+                                            alert("Interview join link copied to clipboard!")
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] cursor-pointer"
+                                    >
+                                        Copy Link
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Final Decision Action Buttons */}

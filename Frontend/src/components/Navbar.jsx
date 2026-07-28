@@ -1,10 +1,12 @@
+import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { Sparkles, Search, BarChart3, LogIn, UserPlus, LogOut, User as UserIcon } from "lucide-react"
+import { Sparkles, Search, BarChart3, LogIn, UserPlus, LogOut, Menu, X } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 
 const Navbar = () => {
     const location = useLocation()
     const { user, logout } = useAuth()
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     const isActive = (path) => location.pathname === path
 
@@ -33,44 +35,44 @@ const Navbar = () => {
                                     Talent<span className="text-indigo-400">AI</span>
                                 </span>
                                 <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">
-                                    ATS Enterprise
+                                    ATS
                                 </span>
                             </div>
                             <p className="text-[11px] text-slate-400 hidden sm:block">
-                                Intelligent Resume Screening & Vector Matching
+                                Intelligent Resume Screening & Matching
                             </p>
                         </div>
                     </Link>
 
                     {/* DESKTOP NAV LINKS */}
-                    <nav className="flex items-center gap-1 sm:gap-2">
+                    <nav className="hidden md:flex items-center gap-2">
                         <Link
                             to="/"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
                                 isActive("/")
                                     ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 shadow-inner"
                                     : "text-slate-300 hover:text-white hover:bg-slate-800/60"
                             }`}
                         >
-                            <Search className="w-4 h-4" />
+                            <Search className="w-4 h-4 text-indigo-400" />
                             <span>Resume Matcher</span>
                         </Link>
 
                         <Link
                             to="/dashboard"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
                                 isActive("/dashboard")
                                     ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 shadow-inner"
                                     : "text-slate-300 hover:text-white hover:bg-slate-800/60"
                             }`}
                         >
-                            <BarChart3 className="w-4 h-4" />
+                            <BarChart3 className="w-4 h-4 text-indigo-400" />
                             <span>Analytics</span>
                         </Link>
                     </nav>
 
-                    {/* AUTH USER BADGE / BUTTONS */}
-                    <div className="flex items-center gap-3">
+                    {/* DESKTOP AUTH USER BADGE / BUTTONS */}
+                    <div className="hidden md:flex items-center gap-3">
                         {user ? (
                             <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-800 rounded-full pl-2 pr-3 py-1">
                                 {user.avatar ? (
@@ -85,19 +87,19 @@ const Navbar = () => {
                                     </div>
                                 )}
 
-                                <div className="hidden md:flex flex-col text-left">
+                                <div className="flex flex-col text-left">
                                     <span className="text-xs font-semibold text-white leading-tight">
                                         {user.name}
                                     </span>
                                     <span className="text-[10px] text-slate-400 leading-tight">
-                                        {user.authProvider === "google" ? "Google Auth" : user.email}
+                                        {user.email}
                                     </span>
                                 </div>
 
                                 <button
                                     onClick={logout}
                                     title="Logout"
-                                    className="ml-1 p-1.5 rounded-full text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                    className="ml-1 p-1.5 rounded-full text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                                 >
                                     <LogOut className="w-4 h-4" />
                                 </button>
@@ -106,7 +108,7 @@ const Navbar = () => {
                             <div className="flex items-center gap-2">
                                 <Link
                                     to="/login"
-                                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 border border-slate-800 transition-all"
+                                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 border border-slate-800 transition-all"
                                 >
                                     <LogIn className="w-3.5 h-3.5" />
                                     <span>Sign In</span>
@@ -114,7 +116,7 @@ const Navbar = () => {
 
                                 <Link
                                     to="/signup"
-                                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/30 transition-all"
+                                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/30 transition-all"
                                 >
                                     <UserPlus className="w-3.5 h-3.5" />
                                     <span>Sign Up</span>
@@ -122,8 +124,86 @@ const Navbar = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* MOBILE HAMBURGER BUTTON */}
+                    <div className="flex md:hidden items-center">
+                        <button
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800 cursor-pointer"
+                        >
+                            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            {/* MOBILE MENU DROPDOWN */}
+            {mobileMenuOpen && (
+                <div className="md:hidden border-b border-slate-800 bg-slate-950/95 backdrop-blur-xl px-4 pt-3 pb-6 space-y-3">
+                    <Link
+                        to="/"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-semibold ${
+                            isActive("/") ? "bg-indigo-600 text-white" : "text-slate-300 bg-slate-900 border border-slate-800"
+                        }`}
+                    >
+                        <Search className="w-4 h-4" />
+                        <span>Resume Matcher</span>
+                    </Link>
+
+                    <Link
+                        to="/dashboard"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-semibold ${
+                            isActive("/dashboard") ? "bg-indigo-600 text-white" : "text-slate-300 bg-slate-900 border border-slate-800"
+                        }`}
+                    >
+                        <BarChart3 className="w-4 h-4" />
+                        <span>Analytics Dashboard</span>
+                    </Link>
+
+                    {user ? (
+                        <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs text-slate-300">
+                                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white">
+                                    {getInitials(user.name)}
+                                </div>
+                                <div className="truncate">
+                                    <p className="font-bold text-white leading-tight">{user.name}</p>
+                                    <p className="text-[10px] text-slate-400">{user.email}</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    logout()
+                                    setMobileMenuOpen(false)
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                            <Link
+                                to="/login"
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="py-2 text-center rounded-xl text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800"
+                            >
+                                Sign In
+                            </Link>
+                            <Link
+                                to="/signup"
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="py-2 text-center rounded-xl text-xs font-bold text-white bg-indigo-600"
+                            >
+                                Sign Up
+                            </Link>
+                        </div>
+                    )}
+                </div>
+            )}
         </header>
     )
 }

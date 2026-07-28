@@ -10,18 +10,21 @@ import {
     submitExam,
     getExamByResumeId,
     updateInterviewStatus,
-    sendConfirmation
+    sendConfirmation,
+    sendVideoInterviewInvite,
+    verifyInterviewToken
 } from "../controllers/examController.js"
 
 const router = express.Router()
 
 // ===================================
-// PUBLIC CANDIDATE EXAM ROUTES
+// PUBLIC CANDIDATE EXAM & INTERVIEW ROUTES
 // ===================================
 router.get("/verify/:token", verifyExamToken)
 router.post("/start/:token", startExam)
 router.post("/run-code", runCodeTest)
 router.post("/submit/:token", submitExam)
+router.get("/interview-verify/:token", verifyInterviewToken)
 
 // ===================================
 // PROTECTED HR DASHBOARD ROUTES
@@ -31,6 +34,8 @@ router.post("/invite/:resumeId", protect, sendExamInvite)
 router.post("/invite-batch", protect, sendBatchExamInvites)
 router.get("/resume/:resumeId", protect, getExamByResumeId)
 router.patch("/interview/:examId", protect, updateInterviewStatus)
+router.post("/interview-invite/:resumeId", protect, sendVideoInterviewInvite)
 router.post("/confirm-hiring/:resumeId", protect, sendConfirmation)
 
 export default router
+

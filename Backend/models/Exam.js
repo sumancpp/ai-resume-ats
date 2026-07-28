@@ -93,8 +93,16 @@ const examSchema = new mongoose.Schema({
     },
     interviewStatus: {
         type: String,
-        enum: ["none", "scheduled", "passed", "failed"],
+        enum: ["none", "scheduled", "invited", "passed", "failed"],
         default: "none"
+    },
+    interviewToken: {
+        type: String,
+        default: null
+    },
+    interviewExpiresAt: {
+        type: Date,
+        default: null
     },
     interviewNotes: {
         type: String,

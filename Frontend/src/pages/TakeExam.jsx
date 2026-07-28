@@ -302,38 +302,38 @@ export default function TakeExam() {
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
             {/* Top Bar with Timer */}
-            <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 px-6 py-4 flex items-center justify-between shadow-xl">
-                <div className="flex items-center gap-3">
-                    <span className="font-bold text-lg text-white">TalentAI Assessment</span>
-                    <span className="px-3 py-1 bg-slate-800 border border-slate-700 text-xs rounded-full text-indigo-300">
+            <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <span className="font-extrabold text-base sm:text-lg text-white tracking-tight">TalentAI Assessment</span>
+                    <span className="px-2.5 py-0.5 bg-slate-800 border border-slate-700 text-xs rounded-full text-indigo-300 font-medium truncate max-w-[150px] sm:max-w-none">
                         Candidate: {candidateName}
                     </span>
                 </div>
 
                 {/* Timer Badge */}
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-mono text-lg font-bold border transition-colors ${timeLeft < 120 ? "bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse" : "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"}`}>
-                    <Clock className="w-5 h-5" />
+                <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-mono text-base sm:text-lg font-bold border transition-colors ${timeLeft < 120 ? "bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse" : "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"}`}>
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span>{formatTime(timeLeft)}</span>
                 </div>
             </header>
 
             {/* Main Area */}
-            <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-6 gap-6">
+            <div className="flex-1 flex flex-col lg:flex-row max-w-7xl w-full mx-auto p-4 sm:p-6 gap-6">
                 {/* Left Navigation Panel */}
-                <aside className="w-full md:w-64 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+                <aside className="w-full lg:w-64 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
                     <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Questions ({questions.length})</h4>
-                        <div className="grid grid-cols-5 md:grid-cols-2 gap-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Questions ({questions.length})</h4>
+                        <div className="grid grid-cols-5 sm:grid-cols-10 lg:grid-cols-2 gap-2">
                             {questions.map((q, idx) => {
                                 const isAnswered = q.type === "mcq" ? answers[q.id] !== undefined : !!codeSubmissions[q.id]
                                 return (
                                     <button
                                         key={q.id}
                                         onClick={() => setCurrentQIndex(idx)}
-                                        className={`p-3 rounded-xl font-bold text-sm flex items-center justify-between border transition-all cursor-pointer ${idx === currentQIndex ? "bg-indigo-600 text-white border-indigo-400" : isAnswered ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-slate-800 text-slate-400 border-slate-700"}`}
+                                        className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-between border transition-all cursor-pointer ${idx === currentQIndex ? "bg-indigo-600 text-white border-indigo-400" : isAnswered ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-slate-800 text-slate-400 border-slate-700"}`}
                                     >
                                         <span>Q{idx + 1}</span>
-                                        <span className="text-xs opacity-75">{q.type.toUpperCase()}</span>
+                                        <span className="text-[10px] opacity-75 hidden lg:inline">{q.type.toUpperCase()}</span>
                                     </button>
                                 )
                             })}
@@ -343,15 +343,15 @@ export default function TakeExam() {
                     <button
                         onClick={handleSubmitExam}
                         disabled={submitting}
-                        className="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                        className="mt-4 lg:mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all text-xs sm:text-sm"
                     >
                         <Send className="w-4 h-4" />
-                        {submitting ? "Submitting..." : "Submit Exam"}
+                        {submitting ? "Submitting..." : "Submit Assessment"}
                     </button>
                 </aside>
 
                 {/* Right Question Card */}
-                <main className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+                <main className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 flex flex-col justify-between">
                     {currentQ && (
                         <div className="space-y-6">
                             <div className="flex items-center justify-between border-b border-slate-800 pb-4">

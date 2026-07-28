@@ -257,7 +257,22 @@ app.post(
                 const normalizedText = text.toLowerCase()
                 skills.forEach((skill) => {
                     const normSkill = skill.toLowerCase()
-                    if (normSkill.length <= 3) {
+                    if (normSkill === "c") {
+                        const regex = /(?:^|[^a-zA-Z0-9_#+])c(?:$|[^a-zA-Z0-9_#+])/i
+                        if (regex.test(normalizedText)) {
+                            extractedSkills.push(skill)
+                        }
+                    } else if (normSkill === "c++") {
+                        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c\+\+|cpp|cplusplus)(?:$|[^a-zA-Z0-9_#+])/i
+                        if (regex.test(normalizedText)) {
+                            extractedSkills.push(skill)
+                        }
+                    } else if (normSkill === "c#") {
+                        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c#|csharp)(?:$|[^a-zA-Z0-9_#+])/i
+                        if (regex.test(normalizedText)) {
+                            extractedSkills.push(skill)
+                        }
+                    } else if (normSkill.length <= 3) {
                         const escaped = normSkill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
                         const regex = new RegExp(`(?:^|[^a-zA-Z0-9_#+])${escaped}(?:$|[^a-zA-Z0-9_#+])`, "i")
                         if (regex.test(normalizedText)) {
@@ -298,10 +313,11 @@ app.post(
 
                 // Extract Candidate Email
                 let email = null
-                const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
-                const emailMatch = text.match(emailRegex)
-                if (emailMatch) {
-                    email = emailMatch[1].toLowerCase().trim()
+                const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi
+                const emailMatches = text.match(emailRegex)
+                if (emailMatches && emailMatches.length > 0) {
+                    const validEmail = emailMatches.find(e => !e.toLowerCase().includes("example.com") && !e.toLowerCase().includes("sample"))
+                    email = (validEmail || emailMatches[0]).toLowerCase().trim()
                 }
 
                 // Auto Role Category Detection
@@ -429,7 +445,22 @@ const STOP_WORDS = new Set([
 const checkKeywordMatch = (text, keyword) => {
     if (!text || !keyword) return false
     const normText = text.toLowerCase()
-    const normKey = keyword.toLowerCase()
+    const normKey = keyword.toLowerCase().trim()
+
+    if (normKey === "c") {
+        const regex = /(?:^|[^a-zA-Z0-9_#+])c(?:$|[^a-zA-Z0-9_#+])/i
+        return regex.test(normText)
+    }
+
+    if (normKey === "c++" || normKey === "cpp") {
+        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c\+\+|cpp|cplusplus)(?:$|[^a-zA-Z0-9_#+])/i
+        return regex.test(normText)
+    }
+
+    if (normKey === "c#" || normKey === "csharp") {
+        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c#|csharp)(?:$|[^a-zA-Z0-9_#+])/i
+        return regex.test(normText)
+    }
 
     if (normKey.length <= 3) {
         const escaped = normKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -475,9 +506,9 @@ app.get("/ai-search", protect, async (req, res) => {
             })
         }
 
-        // Extract key technical tokens from query
-        const rawTokens = userQueryLower.split(/[\s,;&+/]+/)
-        const queryTechKeywords = rawTokens.filter((token) => token.length >= 2 && !STOP_WORDS.has(token))
+        // Extract key technical tokens from query (preserving C, C++, C#, .NET)
+        const rawTokens = userQueryLower.split(/[\s,;&/]+/)
+        const queryTechKeywords = rawTokens.filter((token) => token.length >= 1 && !STOP_WORDS.has(token))
 
         const scoredResumes = []
 

@@ -3,7 +3,7 @@ import Exam from "../models/Exam.js"
 import Resume from "../models/Resume.js"
 import { generateExamQuestions, evaluateExamSubmission } from "../ai/examAiService.js"
 import { runJsCode } from "../helpers/codeRunner.js"
-import { sendExamInviteEmail, sendHiringConfirmationEmail } from "../utils/sendEmail.js"
+import { sendExamInviteEmail, sendHiringConfirmationEmail, sendVideoInterviewInviteEmail } from "../utils/sendEmail.js"
 
 /**
  * Toggle CV Shortlist status for a candidate
@@ -452,3 +452,112 @@ export const sendConfirmation = async (req, res) => {
         res.status(500).json({ success: false, message: "Error sending confirmation email" })
     }
 }
+
+/**
+ * Send / Resend Video Interview Email & Join Link to Candidate
+ */
+export const sendVideoInterviewInvite = async (req, res) => {
+    try {
+        const { resumeId } = req.params
+        const { candidateEmail, isResend } = req.body
+
+        const resume = await Resume.findOne({ _id: resumeId, user: req.user._id })
+        if (!resume) {
+            return res.status(404).json({ success: false, message: "Candidate record not found" })
+        }
+
+        const emailToSend = candidateEmail?.trim() || resume.email
+        if (!emailToSend) {
+            return res.status(400).json({ success: false, message: "Candidate email required" })
+        }
+
+        resume.email = emailToSend
+
+        let exam = await Exam.findOne({ resume: resume._id }).sort({ createdAt: -1 })
+        if (!exam) {
+            const token = crypto.randomBytes(24).toString("hex")
+            exam = await Exam.create({
+                resume: resume._id,
+                user: req.user._id,
+                candidateEmail: emailToSend,
+                candidateName: resume.name || "Candidate",
+                token,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                questions: [],
+                status: "pending"
+            })
+        }
+
+        const interviewToken = crypto.randomBytes(24).toString("hex")
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // Strict 5 minutes validity
+
+        exam.interviewToken = interviewToken
+        exam.interviewExpiresAt = expiresAt
+        exam.interviewStatus = "invited"
+        await exam.save()
+
+        resume.latestExam = exam._id
+        resume.hiringStatus = "interview_scheduled"
+        await resume.save()
+
+        const host = req.get("origin") || req.get("referer") || "http://localhost:5173"
+        const cleanHost = host.replace(/\/$/, "")
+        const interviewLink = `${cleanHost}/interview/${interviewToken}`
+
+        await sendVideoInterviewInviteEmail({
+            to: emailToSend,
+            candidateName: resume.name || "Candidate",
+            interviewLink,
+            expiresAt,
+            isResend: Boolean(isResend)
+        })
+
+        res.json({
+            success: true,
+            interviewToken,
+            interviewLink,
+            expiresAt,
+            message: isResend 
+                ? `Updated 5-minute video interview join link emailed to ${emailToSend}!`
+                : `5-Minute Video interview join link emailed to ${emailToSend}! Candidate must join within 5 minutes.`
+        })
+    } catch (error) {
+        console.error("Send video interview invite error:", error)
+        res.status(500).json({ success: false, message: "Error sending video interview invite" })
+    }
+}
+
+/**
+ * Verify Interview Token for candidate live interview portal
+ */
+export const verifyInterviewToken = async (req, res) => {
+    try {
+        const { token } = req.params
+        const exam = await Exam.findOne({ interviewToken: token }).populate("resume")
+
+        if (!exam) {
+            return res.status(404).json({ success: false, message: "Invalid or non-existent interview join link." })
+        }
+
+        if (exam.interviewExpiresAt && new Date() > new Date(exam.interviewExpiresAt)) {
+            return res.status(410).json({
+                success: false,
+                isExpired: true,
+                message: "This interview invitation link has EXPIRED. Please contact HR to request a new join link."
+            })
+        }
+
+        res.json({
+            success: true,
+            candidateName: exam.candidateName,
+            candidateEmail: exam.candidateEmail,
+            roleCategory: exam.resume?.roleCategory || "Software Engineer",
+            interviewStatus: exam.interviewStatus,
+            expiresAt: exam.interviewExpiresAt
+        })
+    } catch (error) {
+        console.error("Verify interview token error:", error)
+        res.status(500).json({ success: false, message: "Error verifying interview join link" })
+    }
+}
+
