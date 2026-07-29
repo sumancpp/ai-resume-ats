@@ -6,25 +6,6 @@ import logoImg from "../assets/logo.png"
 const Footer = () => {
   return (
     <footer role="contentinfo" className="bg-[#0F1012] border-t border-[#23252E] pt-16 pb-12 text-zinc-400 text-sm mt-auto relative z-10 overflow-hidden">
-      
-      {/* Editorial Decorative Quote Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16 pb-12 border-b border-[#23252E]">
-        <div className="relative p-8 sm:p-12 rounded-3xl bg-[#16171B] border border-[#272930] overflow-hidden">
-          <DoodleCrane className="absolute top-4 right-6 opacity-30 pointer-events-none" />
-          <div className="max-w-3xl space-y-4">
-            <p className="text-xs font-mono tracking-widest text-violet-400 uppercase">
-              // Editorial Philosophy
-            </p>
-            <h2 className="font-serif italic text-2xl sm:text-4xl text-[#F9F8F6] leading-tight">
-              “More than any other single invention, thoughtful hiring transforms human endeavor.”
-            </h2>
-            <p className="text-xs text-zinc-400 font-sans pt-2">
-              — Designed with passion for talent acquisition teams and candidates alike.
-            </p>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main 5-Column Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-[#23252E]">

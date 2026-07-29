@@ -25,7 +25,8 @@ import {
 import { getBackendUrl } from "../utils/api"
 
 const SearchResume = () => {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
+  const isAuthenticated = Boolean(token && user)
   const [activeFolder, setActiveFolder] = useState("all")
   const [files, setFiles] = useState([])
   const [isDragging, setIsDragging] = useState(false)
@@ -59,8 +60,7 @@ const SearchResume = () => {
   // CANDIDATE FETCH
   // =====================
   const fetchCandidates = async (searchQuery = query, overrideFolderId = activeFolder) => {
-    if (!token) {
-      navigate("/login")
+    if (!isAuthenticated) {
       return
     }
     const activeQuery = (typeof searchQuery === "string" ? searchQuery : query).trim()
@@ -104,7 +104,7 @@ const SearchResume = () => {
 
   const handleDeleteResume = async (e, resumeId) => {
     e.stopPropagation()
-    if (!token) {
+    if (!isAuthenticated) {
       navigate("/login")
       return
     }
@@ -123,12 +123,12 @@ const SearchResume = () => {
   }
 
   useEffect(() => {
-    if (token && activeFolder !== "all") {
+    if (isAuthenticated && activeFolder !== "all") {
       fetchCandidates(query, activeFolder)
-    } else if (token && activeFolder === "all" && query.trim()) {
+    } else if (isAuthenticated && activeFolder === "all" && query.trim()) {
       fetchCandidates(query, activeFolder)
     }
-  }, [token, activeFolder])
+  }, [isAuthenticated, activeFolder])
 
   // =====================
   // FILE FILTER (PDF & DOCX)
@@ -574,9 +574,10 @@ const SearchResume = () => {
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. MAIN SEARCH WORKSPACE (Dark Obsidian Interface with Scroll Entrance) */}
+      {/* 3. MAIN SEARCH WORKSPACE (Visible only when logged in) */}
       {/* ========================================================================= */}
-      <section id="search-workspace" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
+      {isAuthenticated ? (
+        <section id="search-workspace" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
         
         {/* Section Header */}
         <motion.div
@@ -937,6 +938,43 @@ const SearchResume = () => {
         </div>
 
       </section>
+      ) : (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="bg-[#16171B] border border-[#272930] rounded-3xl p-10 sm:p-16 space-y-6 max-w-3xl mx-auto shadow-2xl relative overflow-hidden"
+          >
+            <div className="w-14 h-14 rounded-full bg-violet-600/20 text-violet-300 border border-violet-500/30 flex items-center justify-center mx-auto">
+              <Sparkles className="w-6 h-6 text-violet-400" />
+            </div>
+            <div className="space-y-3">
+              <h2 className="font-serif text-3xl sm:text-4xl text-white font-normal">
+                Ready to experience thoughtful hiring?
+              </h2>
+              <p className="text-zinc-400 text-xs sm:text-sm max-w-xl mx-auto font-sans leading-relaxed">
+                Sign in or create a free account to upload candidate CVs, structure job role pools, run vector semantic searches, and conduct live video interviews.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+              <button
+                onClick={() => navigate("/signup")}
+                className="px-8 py-3.5 rounded-full bg-[#FAF8F5] !text-[#0F1012] font-bold text-xs shadow-xl hover:bg-white transition-all cursor-pointer"
+              >
+                Create Free Account
+              </button>
+              <button
+                onClick={() => navigate("/login")}
+                className="px-8 py-3.5 rounded-full bg-[#0F1012] text-white border border-[#272930] hover:border-zinc-500 font-semibold text-xs transition-all cursor-pointer"
+              >
+                Sign In to Workspace
+              </button>
+            </div>
+          </motion.div>
+        </section>
+      )}
     </div>
   )
 }
