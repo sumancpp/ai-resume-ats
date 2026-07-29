@@ -525,28 +525,6 @@ const SearchResume = () => {
       {isAuthenticated && (
         <section id="search-workspace" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
           
-          {/* EDITORIAL PHILOSOPHY QUOTE CARD (VISIBLE ONLY AFTER LOGIN / SIGNUP) */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="relative p-8 sm:p-12 rounded-3xl bg-[#16171B] border border-[#272930] overflow-hidden shadow-xl"
-          >
-            <DoodleCrane className="absolute top-4 right-6 opacity-30 pointer-events-none" />
-            <div className="max-w-3xl space-y-4">
-              <p className="text-xs font-mono tracking-widest text-violet-400 uppercase">
-                // Editorial Philosophy
-              </p>
-              <h2 className="font-serif italic text-2xl sm:text-4xl text-[#F9F8F6] leading-tight">
-                “More than any other single invention, thoughtful hiring transforms human endeavor.”
-              </h2>
-              <p className="text-xs text-zinc-400 font-sans pt-2">
-                — Designed with passion for talent acquisition teams and candidates alike.
-              </p>
-            </div>
-          </motion.div>
-
           {/* Section Header */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -904,6 +882,28 @@ const SearchResume = () => {
               </div>
             )}
           </div>
+
+          {/* EDITORIAL PHILOSOPHY QUOTE CARD (RIGHT BEFORE FOOTER) */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="relative p-8 sm:p-12 rounded-3xl bg-[#16171B] border border-[#272930] overflow-hidden shadow-xl mt-12"
+          >
+            <DoodleCrane className="absolute top-4 right-6 opacity-30 pointer-events-none" />
+            <div className="max-w-3xl space-y-4">
+              <p className="text-xs font-mono tracking-widest text-violet-400 uppercase">
+                // Editorial Philosophy
+              </p>
+              <h2 className="font-serif italic text-2xl sm:text-4xl text-[#F9F8F6] leading-tight">
+                “More than any other single invention, thoughtful hiring transforms human endeavor.”
+              </h2>
+              <p className="text-xs text-zinc-400 font-sans pt-2">
+                — Designed with passion for talent acquisition teams and candidates alike.
+              </p>
+            </div>
+          </motion.div>
 
         </section>
       )}
