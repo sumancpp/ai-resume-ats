@@ -315,15 +315,15 @@ const SearchResume = () => {
             transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-wrap items-center justify-center gap-4 pt-2"
           >
-            <motion.a
+            <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.96 }}
-              href="#search-workspace"
-              className="px-7 py-3.5 rounded-full bg-[#FAF8F5] !text-[#0F1012] text-xs font-bold shadow-xl flex items-center gap-2"
+              onClick={() => navigate(isAuthenticated ? "/dashboard" : "/signup")}
+              className="px-7 py-3.5 rounded-full bg-[#FAF8F5] !text-[#0F1012] text-xs font-bold shadow-xl flex items-center gap-2 cursor-pointer transition"
             >
               <span>Explore Candidate Workspace</span>
               <ArrowRight className="w-4 h-4" />
-            </motion.a>
+            </motion.button>
             
             <motion.button
               whileHover={{ scale: 1.04 }}
