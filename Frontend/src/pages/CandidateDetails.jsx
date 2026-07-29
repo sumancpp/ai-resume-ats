@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { Document, Page, pdfjs } from "react-pdf"
 import axios from "axios"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowLeft,
   GraduationCap,
@@ -18,7 +18,11 @@ import {
   Video,
   UserCheck,
   RefreshCw,
-  FileCheck
+  FileCheck,
+  Trash2,
+  Calendar,
+  Clock,
+  X
 } from "lucide-react"
 
 import InterviewModal from "../components/InterviewModal"
@@ -32,9 +36,14 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 const CandidateDetails = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { id: routeId } = useParams()
+  const [searchParams] = useSearchParams()
+
   const initialResume = location.state
+  const candidateId = routeId || searchParams.get("id") || (initialResume?._id) || localStorage.getItem("talent_ai_active_candidate_id")
 
   const [resume, setResume] = useState(initialResume)
+  const [loadingCandidate, setLoadingCandidate] = useState(!initialResume && Boolean(candidateId))
   const [numPages, setNumPages] = useState(null)
   const [pageNumber, setPageNumber] = useState(1)
   const [scale, setScale] = useState(1.0)
@@ -46,8 +55,48 @@ const CandidateDetails = () => {
   const [sendingInvite, setSendingInvite] = useState(false)
   const [sendingInterviewInvite, setSendingInterviewInvite] = useState(false)
   const [togglingShortlist, setTogglingShortlist] = useState(false)
+  const [deletingResume, setDeletingResume] = useState(false)
   const [examData, setExamData] = useState(null)
   const [isInterviewOpen, setIsInterviewOpen] = useState(false)
+
+  // Interview Schedule Modal States
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
+  const [scheduledDate, setScheduledDate] = useState("")
+  const [scheduledTime, setScheduledTime] = useState("")
+
+  // Save active candidate ID to localStorage for seamless refresh persistence
+  useEffect(() => {
+    if (resume?._id) {
+      localStorage.setItem("talent_ai_active_candidate_id", resume._id)
+    }
+  }, [resume?._id])
+
+  // Fetch candidate details by ID on refresh if state was lost
+  useEffect(() => {
+    if (!resume && candidateId) {
+      fetchCandidateById(candidateId)
+    }
+  }, [candidateId, resume])
+
+  const fetchCandidateById = async (id) => {
+    try {
+      setLoadingCandidate(true)
+      const backendUrl = getBackendUrl()
+      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+      const res = await axios.get(`${backendUrl}/resumes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (res.data.success && res.data.resume) {
+        setResume(res.data.resume)
+        setCandidateEmail(res.data.resume.email || "")
+      }
+    } catch (err) {
+      console.error("Fetch candidate by ID error:", err)
+    } finally {
+      setLoadingCandidate(false)
+    }
+  }
 
   useEffect(() => {
     if (!candidateEmail && resume?.resumeText) {
@@ -90,6 +139,38 @@ const CandidateDetails = () => {
     }
   }
 
+  const handleDeleteResume = async () => {
+    if (!confirm("Are you sure you want to delete this CV/Resume? After removing, it will never appear in your search results again.")) {
+      return
+    }
+
+    setDeletingResume(true)
+    try {
+      const backendUrl = getBackendUrl()
+      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+      await axios.delete(`${backendUrl}/resumes/${resume._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      localStorage.removeItem("talent_ai_active_candidate_id")
+      alert("Resume removed from database and search results successfully.")
+      navigate("/")
+    } catch (err) {
+      alert("Error deleting resume: " + (err.response?.data?.message || err.message))
+    } finally {
+      setDeletingResume(false)
+    }
+  }
+
+  if (loadingCandidate) {
+    return (
+      <div className="min-h-[calc(100vh-5rem)] bg-[#0F1012] flex flex-col items-center justify-center p-6 text-center text-[#F9F8F6]">
+        <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-zinc-400 text-xs">Loading Candidate Dossier & Resume Document...</p>
+      </div>
+    )
+  }
+
   if (!resume) {
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-[#0F1012] flex flex-col items-center justify-center p-6 text-center text-[#F9F8F6]">
@@ -98,7 +179,7 @@ const CandidateDetails = () => {
         </div>
         <h2 className="font-serif text-3xl text-white mb-2">No Candidate Dossier Selected</h2>
         <p className="text-zinc-400 text-xs sm:text-sm max-w-md mb-6 font-sans">
-          Please search and select a candidate from the Editorial Resume Matcher to inspect details.
+          Please search and select a candidate from the Candidate Pool to inspect details.
         </p>
         <button
           onClick={() => navigate("/")}
@@ -173,9 +254,9 @@ const CandidateDetails = () => {
     }
   }
 
-  const handleSendVideoInterviewInvite = async (isResend = false) => {
+  const handleSendScheduledInterview = async () => {
     if (!candidateEmail || !candidateEmail.includes("@")) {
-      alert("Please enter a valid candidate email address to send the video interview invitation.")
+      alert("Please enter a valid candidate email address.")
       return
     }
 
@@ -185,11 +266,16 @@ const CandidateDetails = () => {
       const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
       const res = await axios.post(
         `${backendUrl}/api/exams/interview-invite/${resume._id}`,
-        { candidateEmail, isResend },
+        {
+          candidateEmail,
+          scheduledDate: scheduledDate || "As Scheduled",
+          scheduledTime: scheduledTime || "TBD by HR"
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
       alert(res.data.message)
+      setScheduleModalOpen(false)
       setResume((prev) => ({ ...prev, email: candidateEmail, hiringStatus: "interview_scheduled" }))
       fetchExamData()
     } catch (err) {
@@ -240,7 +326,16 @@ const CandidateDetails = () => {
             <span>Back to Candidate List</span>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleDeleteResume}
+              disabled={deletingResume}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold transition-all cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{deletingResume ? "Deleting..." : "Delete Candidate CV"}</span>
+            </button>
+
             {pdfUrl && (
               <a
                 href={pdfUrl}
@@ -258,7 +353,7 @@ const CandidateDetails = () => {
         {/* MAIN SPLIT VIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* LEFT COLUMN: DOSSIER INFO (Enters from Left) */}
+          {/* LEFT COLUMN: DOSSIER INFO */}
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
@@ -338,21 +433,11 @@ const CandidateDetails = () => {
                   </button>
 
                   <button
-                    onClick={() => handleSendVideoInterviewInvite(false)}
-                    disabled={sendingInterviewInvite}
+                    onClick={() => setScheduleModalOpen(true)}
                     className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer transition shadow-md"
                   >
                     <Video className="w-4 h-4 text-emerald-100" />
-                    {sendingInterviewInvite ? "Sending Meet Link..." : "Email Google Meet Interview Link"}
-                  </button>
-
-                  <button
-                    onClick={() => handleSendVideoInterviewInvite(true)}
-                    disabled={sendingInterviewInvite}
-                    className="w-full py-2 bg-[#16171B] hover:bg-zinc-800 text-emerald-300 border border-emerald-500/30 font-medium text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer transition"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Resend / Generate New Meet Link</span>
+                    <span>Email Passed Exam & Schedule Jitsi Interview</span>
                   </button>
 
                   <button
@@ -448,7 +533,7 @@ const CandidateDetails = () => {
 
           </motion.div>
 
-          {/* RIGHT COLUMN: PDF VIEWER (Enters from Right) */}
+          {/* RIGHT COLUMN: PDF VIEWER */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
@@ -524,7 +609,7 @@ const CandidateDetails = () => {
                       className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs rounded-full transition-all cursor-pointer shadow-md"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
-                      Back to Resume Matcher
+                      Back to Candidate Matcher
                     </button>
                   </div>
                 ) : viewMode === "canvas" ? (
@@ -566,6 +651,91 @@ const CandidateDetails = () => {
         </div>
 
       </div>
+
+      {/* SCHEDULE INTERVIEW MODAL */}
+      <AnimatePresence>
+        {scheduleModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6"
+            >
+              <div className="flex items-center justify-between border-b border-[#272930] pb-4">
+                <div className="flex items-center space-x-2">
+                  <Video className="w-5 h-5 text-emerald-400" />
+                  <h3 className="font-serif text-xl text-white">Schedule Live Jitsi Interview</h3>
+                </div>
+                <button
+                  onClick={() => setScheduleModalOpen(false)}
+                  className="text-zinc-400 hover:text-white p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 text-xs font-sans">
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 space-y-1">
+                  <p className="font-bold text-sm">Exam Passed Email Notification</p>
+                  <p className="text-[11px] text-zinc-400">
+                    Candidate <strong>{resume.name}</strong> will receive an email stating they passed the technical exam with their scheduled meeting date/time and direct Jitsi video room link.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-zinc-400 font-mono text-[10px] uppercase mb-1">
+                    Candidate Email
+                  </label>
+                  <input
+                    type="email"
+                    value={candidateEmail}
+                    onChange={(e) => setCandidateEmail(e.target.value)}
+                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-zinc-400 font-mono text-[10px] uppercase mb-1 flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-violet-400" />
+                      Select Date
+                    </label>
+                    <input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-zinc-400 font-mono text-[10px] uppercase mb-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-violet-400" />
+                      Select Time
+                    </label>
+                    <input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSendScheduledInterview}
+                  disabled={sendingInterviewInvite}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer transition shadow-xl mt-2"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{sendingInterviewInvite ? "Sending Email..." : "Send Assessment Passed & Jitsi Meeting Email"}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <InterviewModal
         isOpen={isInterviewOpen}

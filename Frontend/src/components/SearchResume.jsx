@@ -18,6 +18,8 @@ import {
   Loader2,
   GraduationCap,
   ArrowRight,
+  Trash2,
+  LogIn
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
@@ -57,6 +59,10 @@ const SearchResume = () => {
   // CANDIDATE FETCH
   // =====================
   const fetchCandidates = async (searchQuery = query, overrideFolderId = activeFolder) => {
+    if (!token) {
+      navigate("/login")
+      return
+    }
     const activeQuery = (typeof searchQuery === "string" ? searchQuery : query).trim()
     const targetFolder = (typeof overrideFolderId === "string") ? overrideFolderId : activeFolder
 
@@ -93,6 +99,26 @@ const SearchResume = () => {
       console.error("Fetch candidates error:", error)
     } finally {
       setSearchLoading(false)
+    }
+  }
+
+  const handleDeleteResume = async (e, resumeId) => {
+    e.stopPropagation()
+    if (!token) {
+      navigate("/login")
+      return
+    }
+    if (!confirm("Are you sure you want to delete this candidate CV? It will be removed from your search results.")) {
+      return
+    }
+
+    try {
+      const headers = { Authorization: `Bearer ${token}` }
+      await axios.delete(getApiUrl(`/resumes/${resumeId}`), { headers })
+      setResumes((prev) => prev.filter((r) => r._id !== resumeId))
+      setRefreshFolderKey((k) => k + 1)
+    } catch (err) {
+      alert("Error deleting resume: " + (err.response?.data?.message || err.message))
     }
   }
 
@@ -846,9 +872,18 @@ const SearchResume = () => {
                         </div>
                       </div>
 
-                      {/* Score Pill */}
-                      <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-xs font-bold shrink-0">
-                        {resume.score ? `${resume.score}` : "N/A"}
+                      {/* Score Pill & Delete Action */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
+                          {resume.score ? `${resume.score}` : "N/A"}
+                        </div>
+                        <button
+                          onClick={(e) => handleDeleteResume(e, resume._id)}
+                          title="Delete candidate CV"
+                          className="p-1.5 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 

@@ -145,7 +145,7 @@ app.get("/folders", protect, async (req, res) => {
         
         const foldersWithCount = await Promise.all(
             folders.map(async (folder) => {
-                const candidateCount = await Resume.countDocuments({ user: req.user._id, folder: folder._id })
+                const candidateCount = await Resume.countDocuments({ user: req.user._id, folder: folder._id, isDeleted: { $ne: true } })
                 return {
                     ...folder.toObject(),
                     candidateCount
@@ -153,8 +153,8 @@ app.get("/folders", protect, async (req, res) => {
             })
         )
 
-        const totalResumes = await Resume.countDocuments({ user: req.user._id })
-        const unassignedCount = await Resume.countDocuments({ user: req.user._id, folder: null })
+        const totalResumes = await Resume.countDocuments({ user: req.user._id, isDeleted: { $ne: true } })
+        const unassignedCount = await Resume.countDocuments({ user: req.user._id, folder: null, isDeleted: { $ne: true } })
 
         res.json({
             success: true,
@@ -165,6 +165,35 @@ app.get("/folders", protect, async (req, res) => {
     } catch (error) {
         console.error("Fetch folders error:", error)
         res.status(500).json({ success: false, message: "Error fetching job folders" })
+    }
+})
+
+// Single Resume Fetch & Soft-Delete API
+app.get("/resumes/:id", protect, async (req, res) => {
+    try {
+        const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id, isDeleted: { $ne: true } }).populate("folder", "name color")
+        if (!resume) {
+            return res.status(404).json({ success: false, message: "Candidate dossier not found" })
+        }
+        res.json({ success: true, resume })
+    } catch (error) {
+        console.error("Fetch single resume error:", error)
+        res.status(500).json({ success: false, message: "Error fetching resume details" })
+    }
+})
+
+app.delete("/resumes/:id", protect, async (req, res) => {
+    try {
+        const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id })
+        if (!resume) {
+            return res.status(404).json({ success: false, message: "Resume not found" })
+        }
+        resume.isDeleted = true
+        await resume.save()
+        res.json({ success: true, message: "Resume deleted and removed from search results successfully." })
+    } catch (error) {
+        console.error("Delete resume error:", error)
+        res.status(500).json({ success: false, message: "Error removing resume" })
     }
 })
 
@@ -394,7 +423,7 @@ app.get("/search", protect, async (req, res) => {
         const folderId = req.query.folderId
         const normalizedQuery = normalizeText(rawQuery)
 
-        const filter = { user: req.user._id }
+        const filter = { user: req.user._id, isDeleted: { $ne: true } }
         if (folderId && folderId !== "all" && folderId !== "general" && mongoose.Types.ObjectId.isValid(folderId)) {
             filter.folder = folderId
         } else if (folderId === "general") {
@@ -491,7 +520,7 @@ app.get("/ai-search", protect, async (req, res) => {
             })
         }
 
-        const filter = { user: req.user._id }
+        const filter = { user: req.user._id, isDeleted: { $ne: true } }
         if (folderId && folderId !== "all" && folderId !== "general" && mongoose.Types.ObjectId.isValid(folderId)) {
             filter.folder = folderId
         } else if (folderId === "general") {

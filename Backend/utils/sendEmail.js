@@ -211,46 +211,69 @@ export const sendHiringConfirmationEmail = async ({ to, candidateName = "Candida
     return await sendEmail({ to, subject, html, text })
 }
 
-export const sendVideoInterviewInviteEmail = async ({ to, candidateName = "Candidate", interviewLink, meetLink, expiresAt, isResend = false }) => {
-    const formattedDate = new Date(expiresAt).toLocaleString()
+export const sendVideoInterviewInviteEmail = async ({ to, candidateName = "Candidate", interviewLink, meetLink, expiresAt, scheduledDate, scheduledTime, isResend = false }) => {
     const finalMeetUrl = meetLink || interviewLink
     const subject = isResend 
-        ? "📹 Updated Invitation: Live Google Meet Interview Round - TalentAI"
-        : "📹 Invitation: Live Google Meet Interview Round - TalentAI"
+        ? "📹 Updated Meeting Schedule: Live Technical Interview & Evaluation - TalentAI"
+        : "🎉 Congratulations! Technical Assessment Passed & Live Interview Schedule - TalentAI"
+
+    const dateDisplay = scheduledDate || "Scheduled Date"
+    const timeDisplay = scheduledTime || "Scheduled Time"
 
     const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0f172a; border-radius: 12px; padding: 32px; color: #f8fafc; border: 1px solid #334155;">
         <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #818cf8; margin: 0; font-size: 28px; font-weight: 800;">TalentAI Video Interview</h1>
-            <p style="color: #94a3b8; font-size: 14px; margin-top: 4px;">Google Meet Live Evaluation Round</p>
+            <h1 style="color: #34d399; margin: 0; font-size: 28px; font-weight: 800;">TalentAI Recruitment</h1>
+            <p style="color: #94a3b8; font-size: 14px; margin-top: 4px;">Technical Assessment Result & Interview Notice</p>
         </div>
 
         <p style="font-size: 16px; color: #e2e8f0; line-height: 1.6;">Dear <strong>${candidateName}</strong>,</p>
 
-        <p style="font-size: 16px; color: #e2e8f0; line-height: 1.6;">
-            ${isResend 
-                ? "Here is your <strong>updated Google Meet join link</strong> for your Live Technical Interview Round." 
-                : "You have been invited to participate in a <strong>Live Google Meet Video Interview</strong> with our evaluation team."}
-        </p>
+        <div style="background-color: #064e3b; border-left: 4px solid #10b981; border-radius: 8px; padding: 18px; margin: 20px 0;">
+            <p style="margin: 0; color: #ecfdf5; font-size: 16px; font-weight: 700;">
+                🎉 Congratulations! You have successfully passed your Technical Assessment exam!
+            </p>
+            <p style="margin: 6px 0 0 0; color: #a7f3d0; font-size: 14px; line-height: 1.5;">
+                Our hiring team was thoroughly impressed by your performance. We would like to invite you for a <strong>Live Video Interview Round</strong>.
+            </p>
+        </div>
 
-        <div style="background-color: #1e293b; border-left: 4px solid #10b981; border-radius: 6px; padding: 18px; margin: 24px 0;">
-            <h3 style="margin-top: 0; color: #34d399; font-size: 16px;">🎥 Google Meet Instructions & Verification:</h3>
-            <ul style="margin: 0; padding-left: 20px; color: #cbd5e1; font-size: 14px; line-height: 1.8;">
-                <li><strong style="color: #fb7185;">Verified Candidate Email:</strong> You MUST join the Google Meet room using your verified email: <strong style="color: #60a5fa;">${to}</strong>.</li>
-                <li><strong style="color: #f43f5e;">5-Minute Join Window:</strong> Please click the Google Meet link below and enter the room within <strong>5 minutes</strong> (Valid until: <em>${formattedDate}</em>).</li>
-                <li><strong>Direct Google Meet Link:</strong> <a href="${finalMeetUrl}" target="_blank" style="color: #818cf8; word-break: break-all;">${finalMeetUrl}</a></li>
+        <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #818cf8; font-size: 16px;">📅 Live Video Interview Schedule:</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #e2e8f0; margin-top: 10px;">
+                <tr>
+                    <td style="padding: 6px 0; color: #94a3b8; width: 40%;"><strong>Date:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #38bdf8;">${dateDisplay}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #94a3b8;"><strong>Time:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #38bdf8;">${timeDisplay}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #94a3b8;"><strong>Platform:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #34d399;">Jitsi Meet / TalentAI Live Video Room</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="background-color: #1e1b4b; border-left: 4px solid #6366f1; border-radius: 6px; padding: 16px; margin: 20px 0;">
+            <h4 style="margin: 0; color: #a5b4fc; font-size: 14px;">💡 Important Preparation Steps:</h4>
+            <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #c7d2fe; font-size: 13px; line-height: 1.7;">
+                <li>Please test your camera & microphone prior to the meeting.</li>
+                <li>Ensure you join using your registered candidate email address: <strong style="color: #60a5fa;">${to}</strong>.</li>
+                <li>Click the join button below at your scheduled time.</li>
             </ul>
         </div>
 
         <div style="text-align: center; margin: 32px 0;">
             <a href="${finalMeetUrl}" target="_blank" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);">
-                🎥 Join Google Meet Interview Room
+                🎥 Join Jitsi Video Call Room
             </a>
         </div>
 
         <div style="text-align: center; margin-top: 16px;">
             <a href="${interviewLink}" target="_blank" style="color: #818cf8; text-decoration: underline; font-size: 13px;">
-                Alternative TalentAI Web Portal Link
+                Alternative TalentAI Candidate Portal Link
             </a>
         </div>
 
@@ -259,7 +282,7 @@ export const sendVideoInterviewInviteEmail = async ({ to, candidateName = "Candi
     </div>
     `
 
-    const text = `Dear ${candidateName},\n\nJoin your Google Meet Live Video Interview here:\n${finalMeetUrl}\n\nRegistered Email: ${to}\nLink valid until: ${formattedDate}\n\nBest regards,\nTalentAI Team`
+    const text = `Dear ${candidateName},\n\nCongratulations! You passed your Technical Assessment!\n\nYour Live Interview is scheduled for:\nDate: ${dateDisplay}\nTime: ${timeDisplay}\n\nJoin Link: ${finalMeetUrl}\n\nBest regards,\nTalentAI Team`
 
     return await sendEmail({ to, subject, html, text })
 }

@@ -464,7 +464,7 @@ const generateInstantMeetLink = (token) => {
 export const sendVideoInterviewInvite = async (req, res) => {
     try {
         const { resumeId } = req.params
-        const { candidateEmail, customMeetUrl, isResend } = req.body
+        const { candidateEmail, customMeetUrl, isResend, scheduledDate, scheduledTime } = req.body
 
         const resume = await Resume.findOne({ _id: resumeId, user: req.user._id })
         if (!resume) {
@@ -494,7 +494,7 @@ export const sendVideoInterviewInvite = async (req, res) => {
         }
 
         const interviewToken = crypto.randomBytes(24).toString("hex")
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // Strict 5 minutes validity
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days validity for scheduled meeting
         const meetLink = customMeetUrl?.trim() || generateInstantMeetLink(interviewToken)
 
         exam.meetLink = meetLink
@@ -518,6 +518,8 @@ export const sendVideoInterviewInvite = async (req, res) => {
             interviewLink,
             meetLink,
             expiresAt,
+            scheduledDate: scheduledDate || "As per scheduled time",
+            scheduledTime: scheduledTime || "Confirmed by HR",
             isResend: Boolean(isResend)
         })
 
@@ -527,9 +529,7 @@ export const sendVideoInterviewInvite = async (req, res) => {
             interviewLink,
             meetLink,
             expiresAt,
-            message: isResend 
-                ? `Updated Google Meet join link emailed to ${emailToSend}!`
-                : `Instant Google Meet join link emailed to ${emailToSend}! Candidate must join within 5 minutes.`
+            message: `Passed Assessment notification & Jitsi Meet interview invite emailed to ${emailToSend}!`
         })
     } catch (error) {
         console.error("Send video interview invite error:", error)

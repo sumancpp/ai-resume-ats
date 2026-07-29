@@ -82,6 +82,11 @@ const resumeSchema = new mongoose.Schema({
         type: String,
         enum: ["none", "shortlisted", "exam_invited", "exam_completed", "interview_scheduled", "hired", "rejected"],
         default: "none"
+    },
+
+    isDeleted: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

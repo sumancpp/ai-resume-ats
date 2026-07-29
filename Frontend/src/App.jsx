@@ -28,17 +28,20 @@ function AppContent() {
       {!isCandidateAssessmentPage && <Navbar />}
       <main className="flex-1">
         <Routes>
-          {/* Protected Routes - Only accessible when logged in */}
+          {/* Public Main Landing & Search Showcase */}
+          <Route path="/" element={<SearchResume />} />
+
+          {/* Protected Candidate & Dashboard Routes */}
           <Route
-            path="/"
+            path="/candidate"
             element={
               <ProtectedRoute>
-                <SearchResume />
+                <CandidateDetails />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/candidate"
+            path="/candidate/:id"
             element={
               <ProtectedRoute>
                 <CandidateDetails />
