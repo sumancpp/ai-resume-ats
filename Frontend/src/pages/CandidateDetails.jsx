@@ -12,8 +12,6 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
-  ZoomIn,
-  ZoomOut,
   CheckCircle2,
   Mail,
   Send,
@@ -41,7 +39,7 @@ const CandidateDetails = () => {
   const [pageNumber, setPageNumber] = useState(1)
   const [scale, setScale] = useState(1.0)
   const [pdfError, setPdfError] = useState(false)
-  const [viewMode, setViewMode] = useState("canvas") // "canvas" or "native"
+  const [viewMode, setViewMode] = useState("canvas")
 
   // Recruitment Action States
   const [candidateEmail, setCandidateEmail] = useState(initialResume?.email || "")
@@ -224,11 +222,16 @@ const CandidateDetails = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-[#0F1012] text-[#F9F8F6] p-4 sm:p-6 lg:p-10 font-sans">
+    <div className="min-h-[calc(100vh-5rem)] bg-[#0F1012] text-[#F9F8F6] p-4 sm:p-6 lg:p-10 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* TOP BAR */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#23252E] pb-4">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-wrap items-center justify-between gap-4 border-b border-[#23252E] pb-4"
+        >
           <button
             onClick={() => navigate("/")}
             className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-300 hover:text-white px-4 py-2 rounded-full bg-[#16171B] border border-[#272930] hover:border-zinc-500 transition-all cursor-pointer"
@@ -250,13 +253,18 @@ const CandidateDetails = () => {
               </a>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* MAIN SPLIT VIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* LEFT COLUMN: DOSSIER INFO & PIPELINE (5 cols) */}
-          <div className="lg:col-span-5 space-y-6">
+          {/* LEFT COLUMN: DOSSIER INFO (Enters from Left) */}
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-5 space-y-6"
+          >
 
             {/* CANDIDATE HEADER CARD */}
             <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl space-y-6">
@@ -438,10 +446,15 @@ const CandidateDetails = () => {
               </div>
             </div>
 
-          </div>
+          </motion.div>
 
-          {/* RIGHT COLUMN: PDF VIEWER (7 cols) */}
-          <div className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col justify-between min-h-[650px]">
+          {/* RIGHT COLUMN: PDF VIEWER (Enters from Right) */}
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col justify-between min-h-[650px]"
+          >
             
             {/* PDF CONTROLS */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#272930] pb-4 mb-4 text-xs text-zinc-400">
@@ -548,7 +561,7 @@ const CandidateDetails = () => {
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
 
         </div>
 

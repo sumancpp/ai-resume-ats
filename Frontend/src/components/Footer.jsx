@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom"
-import { Sparkles, Globe, Code2, Share2, Cpu, ShieldCheck } from "lucide-react"
-import { DoodleCrane, UnderlineDraw } from "./Handwriting"
+import { Globe, Code2, Share2, Cpu, ShieldCheck } from "lucide-react"
+import { DoodleCrane } from "./Handwriting"
+import logoImg from "../assets/logo.png"
 
 const Footer = () => {
   return (
@@ -31,12 +32,12 @@ const Footer = () => {
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-4">
             <Link to="/" className="flex items-center space-x-3 group inline-block">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-200">
-                <Sparkles className="w-4 h-4 text-purple-100" />
+              <div className="w-9 h-9 rounded-full bg-[#16171B] flex items-center justify-center shadow-md border border-violet-500/30 overflow-hidden p-1">
+                <img src={logoImg} alt="TalentAI Logo" className="w-full h-full object-contain" />
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-serif italic font-normal text-2xl tracking-tight text-[#F9F8F6]">
-                  Ai_Resume<span className="font-sans non-italic font-bold text-violet-400">.Ellipsus</span>
+                  Talent<span className="font-sans non-italic font-bold text-violet-400">AI</span>
                 </span>
               </div>
             </Link>
@@ -133,7 +134,7 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 font-sans">
-          <p>© {new Date().getFullYear()} Ai_Resume.Ellipsus. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} TalentAI Enterprise. All rights reserved.</p>
           <div className="flex items-center space-x-6">
             <a href="#" className="hover:text-zinc-400 transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-zinc-400 transition-colors">Terms of Service</a>

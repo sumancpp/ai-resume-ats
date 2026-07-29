@@ -2,8 +2,10 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { GoogleLogin } from "@react-oauth/google"
-import { Sparkles, Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff } from "lucide-react"
+import { motion } from "framer-motion"
+import { Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { DoodleCrane, UnderlineDraw } from "../components/Handwriting"
+import logoImg from "../assets/logo.png"
 
 const Login = () => {
   const [email, setEmail] = useState("")
@@ -53,12 +55,17 @@ const Login = () => {
 
       <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10 items-center">
         
-        {/* LEFT COLUMN: EDITORIAL BANNER (5 cols) */}
-        <div className="lg:col-span-5 p-8 rounded-3xl bg-[#16171B] border border-[#272930] hidden lg:flex flex-col justify-between min-h-[460px] relative overflow-hidden">
+        {/* LEFT COLUMN: EDITORIAL BANNER (Enters from Left) */}
+        <motion.div
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="lg:col-span-5 p-8 rounded-3xl bg-[#16171B] border border-[#272930] hidden lg:flex flex-col justify-between min-h-[460px] relative overflow-hidden"
+        >
           <DoodleCrane className="absolute top-6 right-6 opacity-30 pointer-events-none" />
           <div className="space-y-4">
-            <div className="w-10 h-10 rounded-full bg-violet-600/20 text-violet-300 border border-violet-500/30 flex items-center justify-center">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-12 h-12 rounded-full bg-[#0F1012] border border-violet-500/30 flex items-center justify-center p-1.5 overflow-hidden">
+              <img src={logoImg} alt="TalentAI Logo" className="w-full h-full object-contain" />
             </div>
             <h2 className="font-serif text-3xl font-normal text-[#F9F8F6] leading-snug">
               Crafted for <br />
@@ -73,12 +80,17 @@ const Login = () => {
           </div>
 
           <div className="pt-6 border-t border-[#272930] text-[11px] text-zinc-500 font-mono">
-            Ai_Resume.Ellipsus Security v2.4
+            TalentAI Security v2.4
           </div>
-        </div>
+        </motion.div>
 
-        {/* RIGHT COLUMN: LOGIN FORM (7 cols) */}
-        <div className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-8 sm:p-10 shadow-2xl space-y-6">
+        {/* RIGHT COLUMN: LOGIN FORM (Enters from Right) */}
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-8 sm:p-10 shadow-2xl space-y-6"
+        >
           <div className="text-left space-y-1">
             <h1 className="font-serif text-2xl sm:text-3xl font-normal text-white">
               Welcome back
@@ -145,7 +157,9 @@ const Login = () => {
               </div>
             </div>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
               type="submit"
               disabled={isSubmitting}
               className="w-full py-3.5 px-4 bg-[#FAF8F5] !text-[#0F1012] font-bold text-xs rounded-full shadow-xl hover:bg-white flex items-center justify-center gap-2 transition disabled:opacity-50 cursor-pointer"
@@ -158,7 +172,7 @@ const Login = () => {
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
-            </button>
+            </motion.button>
           </form>
 
           <div className="relative my-4 text-center">
@@ -187,7 +201,7 @@ const Login = () => {
               Create one free
             </Link>
           </div>
-        </div>
+        </motion.div>
 
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
+import { motion } from "framer-motion"
 import {
   BarChart,
   Bar,
@@ -147,11 +148,16 @@ const Dashboard = () => {
   })
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-[#0F1012] text-[#F9F8F6] p-4 md:p-8 lg:p-12 font-sans">
+    <div className="min-h-[calc(100vh-5rem)] bg-[#0F1012] text-[#F9F8F6] p-4 md:p-8 lg:p-12 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto space-y-10">
 
         {/* DASHBOARD HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#23252E] pb-6">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#23252E] pb-6"
+        >
           <div className="space-y-2">
             <button
               onClick={() => navigate("/")}
@@ -170,100 +176,76 @@ const Dashboard = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               onClick={handleSendBatchExamInvites}
               disabled={sendingBatch}
               className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs rounded-full flex items-center gap-2 shadow-md cursor-pointer transition"
             >
               <Mail className="w-4 h-4" />
               <span>{sendingBatch ? "Sending AI Exams..." : `Mail All Shortlisted (${shortlistedCandidatesCount})`}</span>
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => navigate("/")}
               className="px-4 py-2.5 bg-[#FAF8F5] !text-[#0F1012] font-bold text-xs rounded-full flex items-center gap-2 transition hover:bg-white cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-violet-600" />
               <span>Editorial Matcher</span>
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
 
         {/* METRICS CARDS GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider">
-                Total Candidate Dossiers
-              </span>
-              <div className="font-serif text-3xl font-normal text-white">
-                {totalResumes}
-              </div>
-              <span className="text-[11px] text-violet-400 font-mono">
-                Indexed Talent Pool
-              </span>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 flex items-center justify-center">
-              <FileText className="w-6 h-6" />
-            </div>
-          </div>
-
-          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider">
-                Shortlisted Candidates
-              </span>
-              <div className="font-serif text-3xl font-normal text-emerald-400">
-                {shortlistedCandidatesCount}
-              </div>
-              <span className="text-[11px] text-emerald-400 font-mono">
-                Ready for Assessment
-              </span>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
-              <UserCheck className="w-6 h-6" />
-            </div>
-          </div>
-
-          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider">
-                Academic Institutions
-              </span>
-              <div className="font-serif text-3xl font-normal text-amber-300">
-                {uniqueColleges}
-              </div>
-              <span className="text-[11px] text-amber-300 font-mono">
-                Unique Universities
-              </span>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
-              <Building2 className="w-6 h-6" />
-            </div>
-          </div>
-
-          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider">
-                Skill Tags Identified
-              </span>
-              <div className="font-serif text-3xl font-normal text-violet-300">
-                {totalSkillsCount}
-              </div>
-              <span className="text-[11px] text-violet-300 font-mono">
-                Unique Tech Stacks
-              </span>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20 flex items-center justify-center">
-              <Award className="w-6 h-6" />
-            </div>
-          </div>
+          {[
+            { title: "Total Candidate Dossiers", val: totalResumes, label: "Indexed Talent Pool", icon: FileText, color: "violet" },
+            { title: "Shortlisted Candidates", val: shortlistedCandidatesCount, label: "Ready for Assessment", icon: UserCheck, color: "emerald" },
+            { title: "Academic Institutions", val: uniqueColleges, label: "Unique Universities", icon: Building2, color: "amber" },
+            { title: "Skill Tags Identified", val: totalSkillsCount, label: "Unique Tech Stacks", icon: Award, color: "violet" }
+          ].map((item, idx) => {
+            const Icon = item.icon
+            return (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -4 }}
+                className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl flex items-center justify-between"
+              >
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider">
+                    {item.title}
+                  </span>
+                  <div className="font-serif text-3xl font-normal text-white">
+                    {item.val}
+                  </div>
+                  <span className={`text-[11px] font-mono text-${item.color}-400`}>
+                    {item.label}
+                  </span>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 flex items-center justify-center">
+                  <Icon className="w-6 h-6" />
+                </div>
+              </motion.div>
+            )
+          })}
 
         </div>
 
         {/* CHART CONTAINER */}
-        <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 35 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 md:p-8 shadow-xl space-y-6"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272930] pb-4">
             <div>
               <h2 className="font-serif text-2xl text-white flex items-center gap-2">
@@ -315,10 +297,16 @@ const Dashboard = () => {
               <span>No candidate skill data available yet.</span>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* CANDIDATES DIRECTORY TABLE */}
-        <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 35 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 md:p-8 shadow-xl space-y-6"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272930] pb-4">
             <div>
               <h2 className="font-serif text-2xl text-white">Indexed Candidate Directory</h2>
@@ -365,8 +353,11 @@ const Dashboard = () => {
                   </tr>
                 ) : (
                   filteredResumes.map((resume, idx) => (
-                    <tr
+                    <motion.tr
                       key={resume._id || idx}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: idx * 0.04 }}
                       className="hover:bg-[#1C1E24] transition-colors"
                     >
                       <td className="py-4 px-4 font-semibold text-white">
@@ -436,13 +427,13 @@ const Dashboard = () => {
                           <ChevronRight className="w-3 h-3" />
                         </button>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+        </motion.div>
 
       </div>
     </div>

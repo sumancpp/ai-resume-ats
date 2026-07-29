@@ -6,30 +6,18 @@ import { useAuth } from "../context/AuthContext"
 import FolderManager from "./FolderManager"
 import {
   UnderlineDraw,
-  CircleDraw,
-  HighlightBrush,
   DoodleCrane,
   DoodleBooks,
-  DoodleRobot,
-  DoodleArrow
 } from "./Handwriting"
 import {
   Upload,
   Search,
   FileText,
   Sparkles,
-  CheckCircle2,
   X,
   Loader2,
   GraduationCap,
   ArrowRight,
-  SlidersHorizontal,
-  Users,
-  Briefcase,
-  Zap,
-  Star,
-  Check,
-  ChevronRight
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
@@ -48,7 +36,7 @@ const SearchResume = () => {
   const [uploadStatus, setUploadStatus] = useState(null)
   const [refreshFolderKey, setRefreshFolderKey] = useState(0)
 
-  // Ellipsus Interactive Hero Tab state
+  // Interactive Hero Tab state
   const [heroTab, setHeroTab] = useState("search")
 
   const navigate = useNavigate()
@@ -103,7 +91,7 @@ const SearchResume = () => {
       setTotalUserResumes(response.data.totalUserResumes ?? response.data.resumes?.length ?? 0)
     } catch (error) {
       console.error("Fetch candidates error:", error)
-    } fontFinally: {
+    } finally {
       setSearchLoading(false)
     }
   }
@@ -234,10 +222,10 @@ const SearchResume = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F1012] text-[#F9F8F6] font-sans selection:bg-violet-600 selection:text-white">
+    <div className="min-h-screen bg-[#0F1012] text-[#F9F8F6] font-sans selection:bg-violet-600 selection:text-white overflow-x-hidden">
       
       {/* ========================================================================= */}
-      {/* 1. DARK MODE HERO SECTION (Ellipsus High-Contrast Cinematic Style) */}
+      {/* 1. DARK MODE HERO SECTION (Split-Entry Headline: Left & Right) */}
       {/* ========================================================================= */}
       <section className="relative overflow-hidden pt-16 pb-24 px-4 sm:px-6 lg:px-8 border-b border-[#23252E]">
         
@@ -251,68 +239,81 @@ const SearchResume = () => {
           
           {/* Editorial Badge */}
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#16171B] border border-[#272930] text-xs font-mono tracking-wider text-violet-300 shadow-sm"
           >
             <Sparkles className="w-3.5 h-3.5 text-violet-400 animate-pulse" />
             <span>EDITORIAL TALENT INTELLIGENCE ENGINE</span>
           </motion.div>
 
-          {/* Headline with Serif & Handwritten Highlights */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            className="font-serif text-4xl sm:text-6xl md:text-7xl font-normal text-[#F9F8F6] tracking-tight leading-[1.15] max-w-5xl mx-auto"
-          >
-            Recruit like a human. <br className="hidden sm:inline" />
-            <span className="italic font-light text-zinc-300">Powered by </span>
-            <span className="relative inline-block highlight-marker highlight-purple font-medium text-white">
-              intelligence.
-            </span>
-          </motion.h1>
+          {/* HEADLINE: Split Animation - Line 1 comes from LEFT, Line 2 comes from RIGHT */}
+          <div className="space-y-2 overflow-hidden py-2">
+            <motion.div
+              initial={{ x: -80, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.9, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="font-serif text-4xl sm:text-6xl md:text-7xl font-normal text-[#F9F8F6] tracking-tight leading-none"
+            >
+              Recruit like a human.
+            </motion.div>
+
+            <motion.div
+              initial={{ x: 80, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.9, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="font-serif text-4xl sm:text-6xl md:text-7xl font-normal text-[#F9F8F6] tracking-tight leading-none"
+            >
+              <span className="italic font-light text-zinc-300">Powered by </span>
+              <span className="relative inline-block highlight-marker highlight-purple font-medium text-white">
+                intelligence.
+              </span>
+            </motion.div>
+          </div>
 
           {/* Subtitle */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed font-sans"
           >
-            Ellipsus-grade resume screening, semantic vector matching, and automated candidate evaluations crafted for thoughtful talent acquisition.
+            Precision-grade resume screening, semantic vector matching, and automated candidate evaluations crafted for thoughtful talent acquisition.
           </motion.p>
 
           {/* Quick CTA Buttons */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-wrap items-center justify-center gap-4 pt-2"
           >
-            <a
+            <motion.a
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.96 }}
               href="#search-workspace"
-              className="px-7 py-3.5 rounded-full bg-[#FAF8F5] !text-[#0F1012] text-xs font-bold shadow-xl hover:bg-white hover:scale-105 transition-all duration-200 flex items-center gap-2"
+              className="px-7 py-3.5 rounded-full bg-[#FAF8F5] !text-[#0F1012] text-xs font-bold shadow-xl flex items-center gap-2"
             >
               <span>Explore Candidate Workspace</span>
               <ArrowRight className="w-4 h-4" />
-            </a>
-            <button
+            </motion.a>
+            
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => navigate("/dashboard")}
-              className="px-7 py-3.5 rounded-full bg-[#16171B] text-zinc-200 border border-[#272930] text-xs font-semibold hover:border-zinc-500 hover:text-white transition-all duration-200"
+              className="px-7 py-3.5 rounded-full bg-[#16171B] text-zinc-200 border border-[#272930] text-xs font-semibold hover:border-zinc-500 hover:text-white transition"
             >
               View Analytics Dashboard
-            </button>
+            </motion.button>
           </motion.div>
 
-          {/* ========================================================================= */}
-          {/* HERO APP PREVIEW MOCKUP (Interactive Ellipsus Central Showcase) */}
-          {/* ========================================================================= */}
+          {/* HERO APP PREVIEW MOCKUP */}
           <motion.div
-            initial={{ opacity: 0, y: 35 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.4 }}
+            initial={{ opacity: 0, scale: 0.95, y: 35 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="pt-8 max-w-5xl mx-auto"
           >
             <div className="relative rounded-3xl bg-[#16171B]/95 border border-[#2B2D38] shadow-2xl p-4 sm:p-6 text-left overflow-hidden">
@@ -323,7 +324,7 @@ const SearchResume = () => {
                   <div className="w-3 h-3 rounded-full bg-rose-500/80" />
                   <div className="w-3 h-3 rounded-full bg-amber-500/80" />
                   <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                  <span className="text-xs font-mono text-zinc-400 ml-2 hidden sm:inline">ai_resume_workspace.ellipsus</span>
+                  <span className="text-xs font-mono text-zinc-400 ml-2 hidden sm:inline">talent_ai_workspace</span>
                 </div>
                 
                 {/* Switcher Tabs */}
@@ -360,9 +361,10 @@ const SearchResume = () => {
                 {heroTab === "search" && (
                   <motion.div
                     key="tab-search"
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={{ opacity: 0, x: -15 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 10 }}
+                    exit={{ opacity: 0, x: 15 }}
+                    transition={{ duration: 0.3 }}
                     className="grid grid-cols-1 md:grid-cols-3 gap-4"
                   >
                     <div className="p-4 rounded-2xl bg-[#0F1012] border border-[#272930] space-y-3">
@@ -415,9 +417,10 @@ const SearchResume = () => {
                 {heroTab === "folders" && (
                   <motion.div
                     key="tab-folders"
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={{ opacity: 0, x: -15 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 10 }}
+                    exit={{ opacity: 0, x: 15 }}
+                    transition={{ duration: 0.3 }}
                     className="p-6 rounded-2xl bg-[#0F1012] border border-[#272930] space-y-4"
                   >
                     <div className="flex items-center justify-between text-xs border-b border-[#272930] pb-3">
@@ -448,9 +451,10 @@ const SearchResume = () => {
                 {heroTab === "ai" && (
                   <motion.div
                     key="tab-ai"
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={{ opacity: 0, x: -15 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 10 }}
+                    exit={{ opacity: 0, x: 15 }}
+                    transition={{ duration: 0.3 }}
                     className="p-6 rounded-2xl bg-[#0F1012] border border-[#272930] space-y-3"
                   >
                     <div className="flex items-center gap-2 text-xs text-violet-400 font-mono">
@@ -470,12 +474,18 @@ const SearchResume = () => {
       </section>
 
       {/* ========================================================================= */}
-      {/* 2. WARM CREAM SECTION (Ellipsus Paper Editorial Section) */}
+      {/* 2. WARM CREAM SECTION (Scroll-Triggered Animated Entrance) */}
       {/* ========================================================================= */}
       <section className="bg-cream-paper py-20 px-4 sm:px-6 lg:px-8 border-b border-[#E6E0D6] relative overflow-hidden">
         <div className="max-w-6xl mx-auto space-y-12">
           
-          <div className="text-center space-y-4 max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center space-y-4 max-w-3xl mx-auto"
+          >
             <span className="text-xs font-mono uppercase tracking-widest text-[#E06D53] font-semibold">
               Made for passionate recruiters
             </span>
@@ -487,48 +497,50 @@ const SearchResume = () => {
               </span>
             </h2>
             <p className="text-zinc-600 text-sm sm:text-base leading-relaxed font-sans pt-2">
-              Ai_Resume is here to help you evaluate real candidate potential, extract authentic technical depth, and celebrate talent in all its forms.
+              TalentAI is here to help you evaluate real candidate potential, extract authentic technical depth, and celebrate talent in all its forms.
             </p>
-          </div>
+          </motion.div>
 
-          {/* 3-Card Editorial Features */}
+          {/* 3-Card Editorial Features (Staggered Scroll Entrance) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
             
-            <div className="p-8 rounded-3xl bg-cream-card border border-[#E6E0D6] space-y-4 relative group hover:shadow-lg transition-all duration-300">
-              <div className="w-12 h-12 rounded-2xl bg-[#18181B] text-white flex items-center justify-center text-lg font-serif">
-                01
-              </div>
-              <h3 className="font-serif text-2xl text-[#18181B] font-semibold">
-                Semantic Vector Intelligence
-              </h3>
-              <p className="text-zinc-600 text-xs sm:text-sm leading-relaxed">
-                Rather than relying on mechanical keyword matching, our Gemini AI vector engine evaluates deep conceptual relevance across experience and domain contexts.
-              </p>
-            </div>
-
-            <div className="p-8 rounded-3xl bg-cream-card border border-[#E6E0D6] space-y-4 relative group hover:shadow-lg transition-all duration-300">
-              <div className="w-12 h-12 rounded-2xl bg-[#18181B] text-white flex items-center justify-center text-lg font-serif">
-                02
-              </div>
-              <h3 className="font-serif text-2xl text-[#18181B] font-semibold">
-                Role Folder Workspaces
-              </h3>
-              <p className="text-zinc-600 text-xs sm:text-sm leading-relaxed">
-                Organize candidate pools into dedicated role folders. Easily isolate candidates per requisition without cluttering your global database.
-              </p>
-            </div>
-
-            <div className="p-8 rounded-3xl bg-cream-card border border-[#E6E0D6] space-y-4 relative group hover:shadow-lg transition-all duration-300">
-              <div className="w-12 h-12 rounded-2xl bg-[#18181B] text-white flex items-center justify-center text-lg font-serif">
-                03
-              </div>
-              <h3 className="font-serif text-2xl text-[#18181B] font-semibold">
-                Live Video & Exam Verification
-              </h3>
-              <p className="text-zinc-600 text-xs sm:text-sm leading-relaxed">
-                Generate instant online coding assessments or live AI video interviews with secure token links directly from the candidate dossier.
-              </p>
-            </div>
+            {[
+              {
+                num: "01",
+                title: "Semantic Vector Intelligence",
+                desc: "Rather than relying on mechanical keyword matching, our Gemini AI vector engine evaluates deep conceptual relevance across experience and domain contexts."
+              },
+              {
+                num: "02",
+                title: "Role Folder Workspaces",
+                desc: "Organize candidate pools into dedicated role folders. Easily isolate candidates per requisition without cluttering your global database."
+              },
+              {
+                num: "03",
+                title: "Live Video & Exam Verification",
+                desc: "Generate instant online coding assessments or live AI video interviews with secure token links directly from the candidate dossier."
+              }
+            ].map((card, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.7, delay: idx * 0.15, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -6 }}
+                className="p-8 rounded-3xl bg-cream-card border border-[#E6E0D6] space-y-4 relative group shadow-sm hover:shadow-xl transition-all duration-300"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#18181B] text-white flex items-center justify-center text-lg font-serif">
+                  {card.num}
+                </div>
+                <h3 className="font-serif text-2xl text-[#18181B] font-semibold">
+                  {card.title}
+                </h3>
+                <p className="text-zinc-600 text-xs sm:text-sm leading-relaxed">
+                  {card.desc}
+                </p>
+              </motion.div>
+            ))}
 
           </div>
 
@@ -536,12 +548,18 @@ const SearchResume = () => {
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. MAIN SEARCH WORKSPACE (Dark Obsidian Interface) */}
+      {/* 3. MAIN SEARCH WORKSPACE (Dark Obsidian Interface with Scroll Entrance) */}
       {/* ========================================================================= */}
       <section id="search-workspace" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#23252E] pb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.7 }}
+          className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#23252E] pb-6"
+        >
           <div className="space-y-2">
             <span className="text-xs font-mono uppercase tracking-widest text-violet-400">
               // Candidate Search & Indexing Workspace
@@ -556,7 +574,7 @@ const SearchResume = () => {
               Total Pool: <strong className="text-white">{totalUserResumes !== null ? totalUserResumes : "Private"}</strong> Resumes
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* JOB ROLE FOLDERS */}
         <FolderManager
@@ -571,8 +589,14 @@ const SearchResume = () => {
         {/* 2-COLUMN WORKSPACE GRID (UPLOAD + SEARCH) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* LEFT COLUMN: RESUME INDEXING DROPZONE (5 cols) */}
-          <div className="lg:col-span-5 bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-6">
+          {/* LEFT COLUMN: RESUME INDEXING DROPZONE */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-5 bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-6"
+          >
             <div>
               <div className="flex items-center justify-between mb-4 border-b border-[#272930] pb-3">
                 <h3 className="font-serif text-lg text-white flex items-center gap-2">
@@ -634,7 +658,7 @@ const SearchResume = () => {
 
               {/* Status Banners */}
               {uploadStatus && (
-                <div className={`mt-4 p-3 rounded.xl text-xs border ${
+                <div className={`mt-4 p-3 rounded-xl text-xs border ${
                   uploadStatus.type === "success"
                     ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
                     : "bg-amber-500/10 border-amber-500/20 text-amber-300"
@@ -645,10 +669,12 @@ const SearchResume = () => {
             </div>
 
             {/* Upload Button */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleUpload}
               disabled={uploadLoading || files.length === 0}
-              className="w-full py-3.5 rounded-full bg-[#FAF8F5] !text-[#0F1012] text-xs font-bold shadow-xl hover:bg-white transition disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 rounded-full bg-[#FAF8F5] !text-[#0F1012] text-xs font-bold shadow-xl transition disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
             >
               {uploadLoading ? (
                 <>
@@ -661,11 +687,17 @@ const SearchResume = () => {
                   <span>Index {files.length > 0 ? `${files.length} File(s)` : "Resumes"}</span>
                 </>
               )}
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
-          {/* RIGHT COLUMN: AI SEARCH BAR & PRESETS (7 cols) */}
-          <div className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl space-y-6 flex flex-col justify-between">
+          {/* RIGHT COLUMN: AI SEARCH BAR & PRESETS */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl space-y-6 flex flex-col justify-between"
+          >
             <div className="space-y-5">
               <div className="flex items-center justify-between border-b border-[#272930] pb-3">
                 <h3 className="font-serif text-lg text-white flex items-center gap-2">
@@ -713,8 +745,10 @@ const SearchResume = () => {
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {PRESET_QUERIES.map((preset, idx) => (
-                    <button
+                    <motion.button
                       key={idx}
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.96 }}
                       onClick={() => {
                         setQuery(preset)
                         handleSearch(preset)
@@ -722,7 +756,7 @@ const SearchResume = () => {
                       className="px-3.5 py-1.5 rounded-full bg-[#0F1012] border border-[#272930] hover:border-violet-500/50 text-zinc-300 hover:text-white text-xs font-medium transition cursor-pointer"
                     >
                       {preset}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -738,7 +772,7 @@ const SearchResume = () => {
                 Open Analytics <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* CANDIDATE RANKINGS SECTION */}
@@ -783,15 +817,19 @@ const SearchResume = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {resumes.map((resume) => (
+              {resumes.map((resume, idx) => (
                 <motion.div
                   key={resume._id}
-                  whileHover={{ y: -4 }}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.6, delay: idx * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  whileHover={{ y: -6, scale: 1.01 }}
                   onClick={() => navigate("/candidate", { state: resume })}
                   className="group bg-[#16171B] hover:bg-[#1A1C22] border border-[#272930] hover:border-violet-500/40 rounded-3xl p-6 shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer relative overflow-hidden"
                 >
                   <div>
-                    {/* Header: Candidate Initials Avatar + Name + Score */}
+                    {/* Header */}
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 text-white font-serif font-bold text-base flex items-center justify-center shadow-md shrink-0">

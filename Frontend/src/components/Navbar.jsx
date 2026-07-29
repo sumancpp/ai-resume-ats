@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { Sparkles, Search, BarChart3, LogIn, UserPlus, LogOut, Menu, X } from "lucide-react"
+import { Search, BarChart3, LogIn, UserPlus, LogOut, Menu, X } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
+import logoImg from "../assets/logo.png"
 
 const Navbar = () => {
   const location = useLocation()
@@ -22,19 +23,28 @@ const Navbar = () => {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-[#0F1012]/90 backdrop-blur-md border-b border-[#23252E] shadow-2xl transition-colors duration-300">
+    <motion.header
+      initial={{ y: -80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="sticky top-0 z-50 bg-[#0F1012]/90 backdrop-blur-md border-b border-[#23252E] shadow-2xl transition-colors duration-300"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           
-          {/* LOGO - Ellipsus Editorial Style */}
+          {/* LOGO - TalentAI Editorial Style with logo.png */}
           <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-purple-950/40 group-hover:scale-105 transition-all duration-300 border border-violet-400/30">
-              <Sparkles className="w-5 h-5 text-purple-100" />
-            </div>
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.3 }}
+              className="w-10 h-10 rounded-full bg-[#16171B] flex items-center justify-center shadow-md shadow-purple-950/40 border border-violet-400/30 overflow-hidden p-1"
+            >
+              <img src={logoImg} alt="TalentAI Logo" className="w-full h-full object-contain" />
+            </motion.div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-serif italic font-normal text-2xl tracking-tight text-[#F9F8F6] group-hover:text-violet-300 transition-colors">
-                  Ai_Resume<span className="font-sans non-italic font-bold text-violet-400">.Ellipsus</span>
+                  Talent<span className="font-sans non-italic font-bold text-violet-400">AI</span>
                 </span>
                 <span className="px-2.5 py-0.5 text-[10px] font-mono tracking-widest uppercase bg-violet-500/10 text-violet-300 border border-violet-500/30 rounded-full">
                   Editorial ATS
@@ -62,6 +72,7 @@ const Navbar = () => {
                 <motion.div
                   layoutId="activeTab"
                   className="absolute bottom-1 left-4 right-4 h-[2px] bg-violet-500 rounded-full"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 />
               )}
             </Link>
@@ -80,6 +91,7 @@ const Navbar = () => {
                 <motion.div
                   layoutId="activeTab"
                   className="absolute bottom-1 left-4 right-4 h-[2px] bg-violet-500 rounded-full"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 />
               )}
             </Link>
@@ -128,13 +140,15 @@ const Navbar = () => {
                   <span>Log in</span>
                 </Link>
 
-                <Link
-                  to="/signup"
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-semibold text-white bg-[#FAF8F5] !text-[#0F1012] hover:bg-white shadow-md hover:scale-105 transition-all duration-200"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Sign up free</span>
-                </Link>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}>
+                  <Link
+                    to="/signup"
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-semibold text-white bg-[#FAF8F5] !text-[#0F1012] hover:bg-white shadow-md transition-all duration-200"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Sign up free</span>
+                  </Link>
+                </motion.div>
               </div>
             )}
           </div>
@@ -152,73 +166,81 @@ const Navbar = () => {
       </div>
 
       {/* MOBILE MENU DROPDOWN */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-b border-[#272930] bg-[#0F1012]/95 backdrop-blur-xl px-4 pt-3 pb-6 space-y-3">
-          <Link
-            to="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-medium ${
-              isActive("/") ? "bg-violet-600 text-white font-semibold" : "text-zinc-300 bg-[#16171B] border border-[#272930]"
-            }`}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="md:hidden border-b border-[#272930] bg-[#0F1012]/95 backdrop-blur-xl px-4 pt-3 pb-6 space-y-3 overflow-hidden"
           >
-            <Search className="w-4 h-4" />
-            <span>Resume Search</span>
-          </Link>
+            <Link
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-medium ${
+                isActive("/") ? "bg-violet-600 text-white font-semibold" : "text-zinc-300 bg-[#16171B] border border-[#272930]"
+              }`}
+            >
+              <Search className="w-4 h-4" />
+              <span>Resume Search</span>
+            </Link>
 
-          <Link
-            to="/dashboard"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-medium ${
-              isActive("/dashboard") ? "bg-violet-600 text-white font-semibold" : "text-zinc-300 bg-[#16171B] border border-[#272930]"
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span>Analytics Dashboard</span>
-          </Link>
+            <Link
+              to="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-medium ${
+                isActive("/dashboard") ? "bg-violet-600 text-white font-semibold" : "text-zinc-300 bg-[#16171B] border border-[#272930]"
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Analytics Dashboard</span>
+            </Link>
 
-          {user ? (
-            <div className="pt-3 border-t border-zinc-800 flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-xs text-zinc-300">
-                <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center font-bold text-white">
-                  {getInitials(user.name)}
+            {user ? (
+              <div className="pt-3 border-t border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 text-xs text-zinc-300">
+                  <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center font-bold text-white">
+                    {getInitials(user.name)}
+                  </div>
+                  <div className="truncate">
+                    <p className="font-semibold text-white leading-tight">{user.name}</p>
+                    <p className="text-[10px] text-zinc-400">{user.email}</p>
+                  </div>
                 </div>
-                <div className="truncate">
-                  <p className="font-semibold text-white leading-tight">{user.name}</p>
-                  <p className="text-[10px] text-zinc-400">{user.email}</p>
-                </div>
+
+                <button
+                  onClick={() => {
+                    logout()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="px-3.5 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold"
+                >
+                  Logout
+                </button>
               </div>
-
-              <button
-                onClick={() => {
-                  logout()
-                  setMobileMenuOpen(false)
-                }}
-                className="px-3.5 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold"
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-zinc-800">
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2.5 text-center rounded-2xl text-xs font-semibold text-zinc-300 bg-[#16171B] border border-zinc-800"
-              >
-                Log in
-              </Link>
-              <Link
-                to="/signup"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2.5 text-center rounded-2xl text-xs font-semibold text-zinc-900 bg-[#FAF8F5]"
-              >
-                Sign up free
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-    </header>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-zinc-800">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="py-2.5 text-center rounded-2xl text-xs font-semibold text-zinc-300 bg-[#16171B] border border-zinc-800"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="py-2.5 text-center rounded-2xl text-xs font-semibold text-zinc-900 bg-[#FAF8F5]"
+                >
+                  Sign up free
+                </Link>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.header>
   )
 }
 
