@@ -118,3 +118,64 @@ RETURN ONLY VALID JSON matching this EXACT structure (NO Markdown, NO html, NO e
         }
     ]
 }
+
+/**
+ * Evaluates candidate exam submission (MCQs + Coding challenges) and generates automated score & AI feedback.
+ */
+export const evaluateExamSubmission = async (questions = [], answers = {}, codeSubmissions = []) => {
+    let mcqCorrect = 0
+    let mcqTotal = 0
+    let codingPassed = 0
+    let codingTotal = 0
+
+    questions.forEach((q) => {
+        if (q.type === "mcq") {
+            mcqTotal++
+            const candAns = answers[q.id]
+            const chosenIndex = typeof candAns === "object" ? candAns?.selectedOption : Number(candAns)
+            if (chosenIndex === q.correctOptionIndex) {
+                mcqCorrect++
+            }
+        } else if (q.type === "coding") {
+            codingTotal++
+            const sub = Array.isArray(codeSubmissions) ? codeSubmissions.find((c) => c.questionId === q.id) : null
+            if (sub && Array.isArray(sub.testResults)) {
+                const passedCases = sub.testResults.filter((tr) => tr.passed).length
+                if (passedCases > 0 && passedCases === sub.testResults.length) {
+                    codingPassed++
+                } else if (passedCases > 0) {
+                    codingPassed += passedCases / sub.testResults.length
+                }
+            }
+        }
+    })
+
+    const totalQuestions = questions.length || 1
+    const totalPoints = mcqCorrect + codingPassed
+    const score = Math.min(100, Math.max(0, Math.round((totalPoints / totalQuestions) * 100)))
+
+    let aiFeedback = `Candidate completed assessment scoring ${score}%. Passed ${mcqCorrect}/${mcqTotal} MCQs and ${codingPassed.toFixed(1)}/${codingTotal} coding challenge test cases.`
+
+    try {
+        const geminiModel = getGeminiModel()
+        const prompt = `
+You are an expert technical evaluator reviewing a job applicant's exam submission.
+Exam Performance Summary:
+- Final Score: ${score}%
+- MCQ Correct Answers: ${mcqCorrect} out of ${mcqTotal}
+- Coding Challenges Passed: ${codingPassed.toFixed(1)} out of ${codingTotal}
+
+Generate a 2-sentence professional recruiter evaluation summary describing their performance, technical strengths, and recommendation.
+Keep it strictly under 50 words.
+`
+        const result = await geminiModel.generateContent(prompt)
+        const text = result.response.text().trim()
+        if (text) {
+            aiFeedback = text
+        }
+    } catch (err) {
+        console.error("AI Feedback evaluation generation error, using fallback summary:", err)
+    }
+
+    return { score, aiFeedback }
+}
