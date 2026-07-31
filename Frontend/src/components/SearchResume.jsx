@@ -65,12 +65,6 @@ const SearchResume = () => {
     const activeQuery = (typeof searchQuery === "string" ? searchQuery : query).trim()
     const targetFolder = (typeof overrideFolderId === "string") ? overrideFolderId : activeFolder
 
-    if (!activeQuery && targetFolder === "all") {
-      setResumes([])
-      setSearchAttempted(false)
-      return
-    }
-
     try {
       setSearchLoading(true)
       setSearchAttempted(true)
@@ -122,9 +116,7 @@ const SearchResume = () => {
   }
 
   useEffect(() => {
-    if (isAuthenticated && activeFolder !== "all") {
-      fetchCandidates(query, activeFolder)
-    } else if (isAuthenticated && activeFolder === "all" && query.trim()) {
+    if (isAuthenticated) {
       fetchCandidates(query, activeFolder)
     }
   }, [isAuthenticated, activeFolder])
@@ -226,9 +218,23 @@ const SearchResume = () => {
       const response = await axios.post(url, formData, { headers })
 
       if (response.data.success) {
+        const uploadedCount = response.data.uploadedResumes?.length || 0
+        const skippedCount = response.data.duplicatesSkipped || 0
+
+        let message = ""
+        if (uploadedCount > 0 && skippedCount > 0) {
+          message = `Successfully indexed ${uploadedCount} new resume(s). ${skippedCount} duplicate file(s) skipped.`
+        } else if (uploadedCount > 0) {
+          message = `Successfully indexed ${uploadedCount} candidate resume(s)!`
+        } else if (skippedCount > 0) {
+          message = `Skipped ${skippedCount} file(s) because they were already uploaded previously.`
+        } else {
+          message = response.data.message || "Resume indexing complete."
+        }
+
         setUploadStatus({
-          type: "success",
-          message: `Successfully indexed ${response.data.savedResumes?.length || files.length} candidate resume(s)!`
+          type: uploadedCount > 0 ? "success" : "warning",
+          message
         })
         setFiles([])
         setRefreshFolderKey((prev) => prev + 1)
@@ -252,7 +258,6 @@ const SearchResume = () => {
       return
     }
     const searchQuery = customQuery !== null ? customQuery : query
-    if (!searchQuery.trim() && activeFolder === "all") return
     fetchCandidates(searchQuery, activeFolder)
   }
 
@@ -780,12 +785,12 @@ const SearchResume = () => {
                   <Search className="w-6 h-6" />
                 </div>
                 <h4 className="font-serif text-xl text-white">
-                  {searchAttempted ? "No Matching Candidate Dossiers Found" : "Search Candidate Intelligence Pool"}
+                  {searchAttempted && query.trim() ? "No Matching Candidate Dossiers Found" : "No Candidate Resumes in Pool"}
                 </h4>
                 <p className="text-zinc-400 text-xs max-w-md mx-auto leading-relaxed font-sans">
-                  {searchAttempted
+                  {query.trim()
                     ? `No candidates matched "${query}". Try searching for specific technical skills like Python, React, Java, or DevOps.`
-                    : "Enter a job requirement prompt above or choose a suggested query to view ranked candidate dossiers."}
+                    : "No candidate resumes found in your workspace. Use the Resume Indexer on the left to upload PDF/DOCX resumes!"}
                 </p>
               </div>
             ) : (
