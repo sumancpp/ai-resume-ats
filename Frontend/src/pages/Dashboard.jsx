@@ -160,11 +160,19 @@ const Dashboard = () => {
     }
   }
 
-  // Open Stage Modal helper (Bulk or Individual)
+  // Open Stage Modal helper (Bulk, Individual, or Everyone)
   const openStageModal = (modalType, candidateList = null) => {
-    const candidates = candidateList || resumes.filter((r) => selectedIds.includes(r._id))
-    if (candidates.length === 0) {
-      alert("Please select at least one candidate first using the checkboxes or row action button.")
+    let candidates = candidateList
+    if (!candidates) {
+      if (selectedIds.length > 0) {
+        candidates = resumes.filter((r) => selectedIds.includes(r._id))
+      } else {
+        candidates = resumes
+      }
+    }
+
+    if (!candidates || candidates.length === 0) {
+      alert("No candidate dossiers available to send emails.")
       return
     }
     setTargetCandidates(candidates)
@@ -488,7 +496,17 @@ const Dashboard = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => openStageModal("everyone", resumes)}
+              className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs rounded-full flex items-center gap-2 transition cursor-pointer shadow-lg border border-violet-400/30"
+            >
+              <Mail className="w-4 h-4 text-violet-200" />
+              <span>Send Mail to Everyone ({totalResumes})</span>
+            </motion.button>
+
             <motion.button
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
@@ -1500,6 +1518,162 @@ const Dashboard = () => {
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>{actionLoading ? "Sending..." : `Send Offer Letter (${targetCandidates.length})`}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MASTER PORTAL MODAL: SEND MAIL TO EVERYONE */}
+      {/* ========================================================================= */}
+      {activeModal === "everyone" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F1012]/80 backdrop-blur-md">
+          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl relative space-y-6">
+            <div className="flex items-center justify-between border-b border-[#272930] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-full bg-violet-600/20 text-violet-300 border border-violet-500/30">
+                  <Mail className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-2xl text-white">Send Mail to Everyone</h3>
+                  <p className="text-xs text-zinc-400">
+                    Dispatching stage communications to all <strong>{resumes.length} candidates</strong> in your indexed talent pool
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="text-zinc-400 hover:text-white transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 font-sans text-xs">
+              <div className="text-zinc-400 text-[11px] font-mono uppercase tracking-wider">
+                Select Stage Email to Send to All Candidates:
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                {/* 1st Mail Option */}
+                <button
+                  onClick={() => {
+                    setTargetCandidates(resumes)
+                    setActiveModal("shortlist")
+                  }}
+                  className="p-4 rounded-2xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0">
+                      <UserCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-white">1st Mail — Shortlist & Online Assessment Date</div>
+                      <div className="text-[11px] text-zinc-400 font-normal mt-0.5">
+                        Notifies all shortlisted candidates with online assessment Date & Time chosen by HR.
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                </button>
+
+                {/* 2nd Mail Option */}
+                <button
+                  onClick={() => {
+                    setTargetCandidates(resumes)
+                    setActiveModal("exam_config")
+                    if (examQuestions.length === 0) {
+                      handleGenerateAiQuestions(resumes[0])
+                    }
+                  }}
+                  className="p-4 rounded-2xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-violet-500/20 text-violet-300 flex items-center justify-center shrink-0">
+                      <Sliders className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-white">2nd Mail — AI Exam Configurator & Question Editor</div>
+                      <div className="text-[11px] text-zinc-400 font-normal mt-0.5">
+                        Configure exam duration, MCQ count, coding count, edit AI questions live, and send to everyone.
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                </button>
+
+                {/* 3rd Mail Option */}
+                <button
+                  onClick={() => {
+                    setTargetCandidates(resumes)
+                    setActiveModal("round1_passed")
+                  }}
+                  className="p-4 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0">
+                      <FileCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-white">3rd Mail — Pass Technical Round 1 & Jitsi Schedule</div>
+                      <div className="text-[11px] text-zinc-400 font-normal mt-0.5">
+                        Shows live scores and notifies passed candidates with interview Date/Time & Jitsi signup details.
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                </button>
+
+                {/* 4th Mail Option */}
+                <button
+                  onClick={() => {
+                    setTargetCandidates(resumes)
+                    setActiveModal("interview")
+                  }}
+                  className="p-4 rounded-2xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center shrink-0">
+                      <Video className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-white">4th Mail — Direct Video Interview Link Email</div>
+                      <div className="text-[11px] text-zinc-400 font-normal mt-0.5">
+                        Sends direct Jitsi Meet video interview room links with meeting time & instructions.
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                </button>
+
+                {/* 5th Mail Option */}
+                <button
+                  onClick={() => {
+                    setTargetCandidates(resumes)
+                    setActiveModal("offer")
+                  }}
+                  className="p-4 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-white">5th Mail — Official Selection & Offer Letter Email</div>
+                      <div className="text-[11px] text-zinc-400 font-normal mt-0.5">
+                        Form for Designation, CTC/Salary, Joining Date, and HR message for offer letter dispatches.
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end pt-2 border-t border-[#272930]">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-5 py-2 rounded-full text-xs text-zinc-400 hover:text-white transition cursor-pointer"
+              >
+                Close Portal
               </button>
             </div>
           </div>

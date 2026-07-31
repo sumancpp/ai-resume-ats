@@ -22,7 +22,11 @@ import {
   Trash2,
   Calendar,
   Clock,
-  X
+  X,
+  Sliders,
+  Plus,
+  Edit3,
+  Code2
 } from "lucide-react"
 
 import InterviewModal from "../components/InterviewModal"
@@ -48,21 +52,57 @@ const CandidateDetails = () => {
   const [pageNumber, setPageNumber] = useState(1)
   const [scale, setScale] = useState(1.0)
   const [pdfError, setPdfError] = useState(false)
-  const [viewMode, setViewMode] = useState("canvas")
+  const [viewMode, setViewMode] = useState("canvas") // 'canvas' | 'native' | 'text'
 
   // Recruitment Action States
   const [candidateEmail, setCandidateEmail] = useState(initialResume?.email || "")
-  const [sendingInvite, setSendingInvite] = useState(false)
-  const [sendingInterviewInvite, setSendingInterviewInvite] = useState(false)
-  const [togglingShortlist, setTogglingShortlist] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
   const [deletingResume, setDeletingResume] = useState(false)
   const [examData, setExamData] = useState(null)
   const [isInterviewOpen, setIsInterviewOpen] = useState(false)
 
-  // Interview Schedule Modal States
-  const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
-  const [scheduledDate, setScheduledDate] = useState("")
-  const [scheduledTime, setScheduledTime] = useState("")
+  // 5 STAGE ACTION MODAL STATES
+  const [activeModal, setActiveModal] = useState(null) // 'shortlist' | 'exam_config' | 'round1_passed' | 'interview' | 'offer'
+
+  // 1. Shortlist Notice Form
+  const [shortlistForm, setShortlistForm] = useState({
+    scheduledDate: "",
+    scheduledTime: "",
+    customNotes: ""
+  })
+
+  // 2. Exam Configurator Form & Question Editor State
+  const [examConfig, setExamConfig] = useState({
+    durationMinutes: 15,
+    mcqCount: 3,
+    codingCount: 2,
+    linkExpiryHours: 24,
+    roleCategory: "Software Engineering"
+  })
+  const [examQuestions, setExamQuestions] = useState([])
+  const [generatingAiQuestions, setGeneratingAiQuestions] = useState(false)
+
+  // 3. Round 1 Passed Form
+  const [round1Form, setRound1Form] = useState({
+    scheduledDate: "",
+    scheduledTime: "",
+    customMeetUrl: ""
+  })
+
+  // 4. Video Interview Form
+  const [interviewForm, setInterviewForm] = useState({
+    scheduledDate: "",
+    scheduledTime: "",
+    customMeetUrl: ""
+  })
+
+  // 5. Offer Letter Form
+  const [offerForm, setOfferForm] = useState({
+    roleCategory: "Software Engineer",
+    ctc: "12 LPA",
+    joiningDate: "",
+    hrMessage: ""
+  })
 
   // Save active candidate ID to localStorage for seamless refresh persistence
   useEffect(() => {
@@ -152,13 +192,256 @@ const CandidateDetails = () => {
         headers: { Authorization: `Bearer ${token}` }
       })
 
-      localStorage.removeItem("talent_ai_active_candidate_id")
+      localStorage.removeItem("talent_ai_candidate_id")
       alert("Resume removed from database and search results successfully.")
       navigate("/")
     } catch (err) {
       alert("Error deleting resume: " + (err.response?.data?.message || err.message))
     } finally {
       setDeletingResume(false)
+    }
+  }
+
+  // -------------------------------------------------------------
+  // STAGE HANDLERS FOR INDIVIDUAL CANDIDATE
+  // -------------------------------------------------------------
+  const handleOpenStageModal = (modalType) => {
+    setActiveModal(modalType)
+    if (modalType === "exam_config" && examQuestions.length === 0) {
+      handleGenerateAiQuestions()
+    }
+  }
+
+  // Stage 1: Shortlist Notice
+  const handleSendShortlistNotice = async () => {
+    try {
+      setActionLoading(true)
+      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+      const backendUrl = getBackendUrl()
+
+      const res = await axios.post(
+        `${backendUrl}/api/exams/send-shortlist-notice`,
+        {
+          resumeIds: [resume._id],
+          scheduledDate: shortlistForm.scheduledDate,
+          scheduledTime: shortlistForm.scheduledTime,
+          customNotes: shortlistForm.customNotes
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      alert(res.data.message)
+      setActiveModal(null)
+      setResume((prev) => ({ ...prev, isShortlisted: true, hiringStatus: "shortlisted" }))
+    } catch (err) {
+      alert("Error sending shortlist email: " + (err.response?.data?.message || err.message))
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // Stage 2: AI Exam Configurator & Editor
+  const handleGenerateAiQuestions = async () => {
+    try {
+      setGeneratingAiQuestions(true)
+      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+      const backendUrl = getBackendUrl()
+
+      const res = await axios.post(
+        `${backendUrl}/api/exams/generate-custom-questions`,
+        {
+          resumeId: resume._id,
+          mcqCount: examConfig.mcqCount,
+          codingCount: examConfig.codingCount,
+          roleCategory: examConfig.roleCategory || resume.roleCategory
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      setExamQuestions(res.data.questions || [])
+    } catch (err) {
+      alert("Error generating AI exam questions: " + (err.response?.data?.message || err.message))
+    } finally {
+      setGeneratingAiQuestions(false)
+    }
+  }
+
+  const handleAddCustomMcq = () => {
+    const newMcq = {
+      id: `q_${Date.now()}`,
+      type: "mcq",
+      questionText: "Which of the following is true regarding JavaScript event loops?",
+      options: [
+        "Executes synchronous code first",
+        "Executes microtasks before macrotasks",
+        "Single-threaded non-blocking execution",
+        "All of the above"
+      ],
+      correctOptionIndex: 3
+    }
+    setExamQuestions([...examQuestions, newMcq])
+  }
+
+  const handleAddCustomCoding = () => {
+    const newCoding = {
+      id: `q_${Date.now()}`,
+      type: "coding",
+      questionText: "Write a JavaScript function solution(arr) that returns the sum of all elements.",
+      starterCode: "function solution(arr) {\n  // Write your code here\n  return 0;\n}",
+      testCases: [
+        { input: "[1, 2, 3, 4]", expectedOutput: "10", description: "Sum positive integers" },
+        { input: "[-5, 5]", expectedOutput: "0", description: "Sum negative and positive" }
+      ]
+    }
+    setExamQuestions([...examQuestions, newCoding])
+  }
+
+  const handleUpdateQuestionText = (index, text) => {
+    const updated = [...examQuestions]
+    updated[index].questionText = text
+    setExamQuestions(updated)
+  }
+
+  const handleUpdateMcqOption = (qIdx, optIdx, text) => {
+    const updated = [...examQuestions]
+    updated[qIdx].options[optIdx] = text
+    setExamQuestions(updated)
+  }
+
+  const handleUpdateCorrectOption = (qIdx, optIdx) => {
+    const updated = [...examQuestions]
+    updated[qIdx].correctOptionIndex = optIdx
+    setExamQuestions(updated)
+  }
+
+  const handleUpdateCodingStarter = (index, code) => {
+    const updated = [...examQuestions]
+    updated[index].starterCode = code
+    setExamQuestions(updated)
+  }
+
+  const handleDeleteQuestion = (index) => {
+    setExamQuestions(examQuestions.filter((_, i) => i !== index))
+  }
+
+  const handleSendConfiguredExam = async () => {
+    if (examQuestions.length === 0) {
+      alert("Please generate or add at least 1 question to the exam first.")
+      return
+    }
+
+    try {
+      setActionLoading(true)
+      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+      const backendUrl = getBackendUrl()
+
+      const res = await axios.post(
+        `${backendUrl}/api/exams/send-configured-exam`,
+        {
+          resumeIds: [resume._id],
+          questions: examQuestions,
+          durationMinutes: examConfig.durationMinutes,
+          linkExpiryHours: examConfig.linkExpiryHours,
+          candidateEmailOverrides: { [resume._id]: candidateEmail }
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      alert(res.data.message)
+      setActiveModal(null)
+      setResume((prev) => ({ ...prev, isShortlisted: true, examStatus: "invited", hiringStatus: "exam_invited" }))
+      fetchExamData()
+    } catch (err) {
+      alert("Error sending configured exam: " + (err.response?.data?.message || err.message))
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // Stage 3: Technical Round 1 Passed & Interview Schedule
+  const handleSendRound1Passed = async () => {
+    try {
+      setActionLoading(true)
+      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+      const backendUrl = getBackendUrl()
+
+      const res = await axios.post(
+        `${backendUrl}/api/exams/send-round1-passed`,
+        {
+          resumeIds: [resume._id],
+          scheduledDate: round1Form.scheduledDate,
+          scheduledTime: round1Form.scheduledTime,
+          customMeetUrl: round1Form.customMeetUrl
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      alert(res.data.message)
+      setActiveModal(null)
+      setResume((prev) => ({ ...prev, hiringStatus: "interview_scheduled" }))
+      fetchExamData()
+    } catch (err) {
+      alert("Error sending Round 1 passed email: " + (err.response?.data?.message || err.message))
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // Stage 4: Direct Video Interview Link
+  const handleSendVideoInterviewInvite = async () => {
+    try {
+      setActionLoading(true)
+      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+      const backendUrl = getBackendUrl()
+
+      const res = await axios.post(
+        `${backendUrl}/api/exams/interview-invite/${resume._id}`,
+        {
+          candidateEmail,
+          customMeetUrl: interviewForm.customMeetUrl,
+          scheduledDate: interviewForm.scheduledDate,
+          scheduledTime: interviewForm.scheduledTime
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      alert(res.data.message)
+      setActiveModal(null)
+      setResume((prev) => ({ ...prev, hiringStatus: "interview_scheduled" }))
+      fetchExamData()
+    } catch (err) {
+      alert("Error sending video interview invite: " + (err.response?.data?.message || err.message))
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // Stage 5: Final Offer Letter
+  const handleSendOfferLetter = async () => {
+    try {
+      setActionLoading(true)
+      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+      const backendUrl = getBackendUrl()
+
+      const res = await axios.post(
+        `${backendUrl}/api/exams/send-offer-letter`,
+        {
+          resumeIds: [resume._id],
+          roleCategory: offerForm.roleCategory,
+          ctc: offerForm.ctc,
+          joiningDate: offerForm.joiningDate,
+          hrMessage: offerForm.hrMessage
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      alert(res.data.message)
+      setActiveModal(null)
+      setResume((prev) => ({ ...prev, hiringStatus: "hired" }))
+    } catch (err) {
+      alert("Error sending offer letter email: " + (err.response?.data?.message || err.message))
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -208,110 +491,11 @@ const CandidateDetails = () => {
     setPdfError(true)
   }
 
-  const handleToggleShortlist = async () => {
-    setTogglingShortlist(true)
-    try {
-      const backendUrl = getBackendUrl()
-      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
-      const res = await axios.post(
-        `${backendUrl}/api/exams/shortlist/${resume._id}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-
-      setResume((prev) => ({ ...prev, isShortlisted: res.data.isShortlisted }))
-      alert(res.data.message)
-    } catch (err) {
-      alert("Error toggling shortlist: " + (err.response?.data?.message || err.message))
-    } finally {
-      setTogglingShortlist(false)
-    }
-  }
-
-  const handleSendExamInvite = async () => {
-    if (!candidateEmail || !candidateEmail.includes("@")) {
-      alert("Please enter a valid candidate email address to send the exam invitation.")
-      return
-    }
-
-    setSendingInvite(true)
-    try {
-      const backendUrl = getBackendUrl()
-      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
-      const res = await axios.post(
-        `${backendUrl}/api/exams/invite/${resume._id}`,
-        { candidateEmail },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-
-      alert(res.data.message)
-      setResume((prev) => ({ ...prev, isShortlisted: true, examStatus: "invited", email: candidateEmail }))
-      fetchExamData()
-    } catch (err) {
-      alert("Error sending exam invite: " + (err.response?.data?.message || err.message))
-    } finally {
-      setSendingInvite(false)
-    }
-  }
-
-  const handleSendScheduledInterview = async () => {
-    if (!candidateEmail || !candidateEmail.includes("@")) {
-      alert("Please enter a valid candidate email address.")
-      return
-    }
-
-    setSendingInterviewInvite(true)
-    try {
-      const backendUrl = getBackendUrl()
-      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
-      const res = await axios.post(
-        `${backendUrl}/api/exams/interview-invite/${resume._id}`,
-        {
-          candidateEmail,
-          scheduledDate: scheduledDate || "As Scheduled",
-          scheduledTime: scheduledTime || "TBD by HR"
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-
-      alert(res.data.message)
-      setScheduleModalOpen(false)
-      setResume((prev) => ({ ...prev, email: candidateEmail, hiringStatus: "interview_scheduled" }))
-      fetchExamData()
-    } catch (err) {
-      alert("Error sending video interview invite: " + (err.response?.data?.message || err.message))
-    } finally {
-      setSendingInterviewInvite(false)
-    }
-  }
-
-  const handleSendConfirmation = async () => {
-    if (!candidateEmail || !candidateEmail.includes("@")) {
-      alert("Please enter a valid candidate email address.")
-      return
-    }
-
-    try {
-      const backendUrl = getBackendUrl()
-      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
-      const res = await axios.post(
-        `${backendUrl}/api/exams/confirm-hiring/${resume._id}`,
-        { email: candidateEmail },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-
-      alert(res.data.message)
-      setResume((prev) => ({ ...prev, hiringStatus: "hired" }))
-    } catch (err) {
-      alert("Error sending confirmation email: " + (err.response?.data?.message || err.message))
-    }
-  }
-
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-[#0F1012] text-[#F9F8F6] p-4 sm:p-6 lg:p-10 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* TOP BAR */}
+        {/* TOP NAVIGATION BAR */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -336,7 +520,7 @@ const CandidateDetails = () => {
               <span>{deletingResume ? "Deleting..." : "Delete Candidate CV"}</span>
             </button>
 
-            {pdfUrl && (
+            {pdfUrl && !pdfError && (
               <a
                 href={pdfUrl}
                 target="_blank"
@@ -350,152 +534,131 @@ const CandidateDetails = () => {
           </div>
         </motion.div>
 
-        {/* MAIN SPLIT VIEW */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-          {/* LEFT COLUMN: DOSSIER INFO */}
+        {/* MAIN 2-COLUMN DOSSIER GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* LEFT COLUMN: CANDIDATE SUMMARY & 5 STAGE MAIL ACTIONS */}
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="lg:col-span-5 space-y-6"
           >
-
-            {/* CANDIDATE HEADER CARD */}
-            <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 shadow-xl space-y-6">
+            {/* DOSSIER CARD */}
+            <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl relative overflow-hidden">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center space-x-4">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 text-white font-serif font-bold text-2xl flex items-center justify-center shadow-lg shrink-0">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 text-white font-serif font-bold text-2xl flex items-center justify-center shadow-lg border border-white/10 shrink-0">
                     {resume.name ? resume.name.charAt(0).toUpperCase() : "C"}
                   </div>
                   <div>
-                    <h1 className="font-serif text-2xl font-normal text-white">
+                    <h1 className="font-serif text-2xl sm:text-3xl font-normal text-white leading-tight">
                       {resume.name || "Candidate Dossier"}
                     </h1>
                     <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-1">
                       <GraduationCap className="w-4 h-4 text-violet-400 shrink-0" />
-                      <span>{resume.college || "Institution Unspecified"}</span>
+                      <span className="truncate">{resume.college || "Academic Graduate"}</span>
                     </div>
                   </div>
                 </div>
 
-                {resume.score && (
-                  <div className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-sm font-bold text-center shrink-0">
-                    <div className="text-[9px] uppercase font-mono text-emerald-400">Match</div>
-                    {resume.score}
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <div className="px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
+                    {resume.score ? `${resume.score} Match` : "Verified"}
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* RECRUITMENT ACTION PIPELINE */}
-              <div className="bg-[#0F1012] border border-[#272930] rounded-2xl p-4 space-y-4">
-                <h3 className="text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
-                  <FileCheck className="w-4 h-4 text-violet-400" />
-                  <span>Editorial Recruitment Pipeline</span>
-                </h3>
+              {/* CANDIDATE EMAIL FIELD */}
+              <div className="bg-[#0F1012] border border-[#272930] rounded-2xl p-3.5 space-y-2">
+                <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                  Registered Candidate Email Address
+                </label>
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-violet-400 shrink-0" />
+                  <input
+                    type="email"
+                    placeholder="candidate@example.com"
+                    value={candidateEmail}
+                    onChange={(e) => setCandidateEmail(e.target.value)}
+                    className="w-full bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none"
+                  />
+                </div>
+              </div>
 
-                {/* EMAIL INPUT & SHORTLIST BUTTON */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                    <span>Candidate Email (Auto-extracted):</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-stretch gap-2">
-                    <input
-                      type="email"
-                      value={candidateEmail}
-                      onChange={(e) => setCandidateEmail(e.target.value)}
-                      placeholder="candidate@example.com"
-                      className="flex-1 bg-[#16171B] border border-[#272930] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-violet-500"
-                    />
-                    <button
-                      onClick={handleToggleShortlist}
-                      disabled={togglingShortlist}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer border shrink-0 ${
-                        resume.isShortlisted
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                          : "bg-[#16171B] text-zinc-300 border-[#272930] hover:bg-zinc-800"
-                      }`}
-                    >
-                      {resume.isShortlisted ? "✓ Shortlisted" : "+ Shortlist"}
-                    </button>
-                  </div>
+              {/* 5 STAGE RECRUITER MAIL BUTTONS */}
+              <div className="space-y-3 pt-2 border-t border-[#272930]">
+                <div className="flex items-center justify-between text-xs font-mono uppercase text-violet-400 font-semibold">
+                  <span>// Candidate Stage Email Actions</span>
+                  <span className="text-zinc-500 text-[10px]">Individual Stage Mail</span>
                 </div>
 
-                {/* ACTION BUTTONS */}
-                <div className="grid grid-cols-1 gap-2.5 pt-1">
+                <div className="grid grid-cols-1 gap-2">
+                  
+                  {/* Button 1: Shortlist Notice */}
                   <button
-                    onClick={handleSendExamInvite}
-                    disabled={sendingInvite}
-                    className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer transition shadow-md"
+                    onClick={() => handleOpenStageModal("shortlist")}
+                    className="w-full py-2.5 px-4 rounded-2xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer"
                   >
-                    <Mail className="w-4 h-4" />
-                    {sendingInvite ? "Sending Assessment Email..." : "Send 24h Technical Assessment Invite"}
-                  </button>
-
-                  <button
-                    onClick={() => setScheduleModalOpen(true)}
-                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer transition shadow-md"
-                  >
-                    <Video className="w-4 h-4 text-emerald-100" />
-                    <span>Email Passed Exam & Schedule Jitsi Interview</span>
-                  </button>
-
-                  <button
-                    onClick={() => setIsInterviewOpen(true)}
-                    className="w-full py-2.5 bg-[#16171B] hover:bg-zinc-800 text-violet-300 border border-violet-500/30 font-semibold text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer transition"
-                  >
-                    <UserCheck className="w-4 h-4 text-violet-400" />
-                    <span>Open Live HR Evaluation Console</span>
-                  </button>
-
-                  <button
-                    onClick={handleSendConfirmation}
-                    className="w-full py-2.5 bg-[#FAF8F5] !text-[#0F1012] font-bold text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer shadow-md hover:bg-white transition"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>Send Offer Confirmation Letter</span>
-                  </button>
-                </div>
-
-                {/* EXAM STATUS */}
-                {examData && (
-                  <div className="bg-[#16171B] border border-[#272930] rounded-xl p-3 space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-zinc-400">Exam Status:</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase ${
-                        examData.status === "completed" ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
-                      }`}>
-                        {examData.status}
-                      </span>
+                    <div className="flex items-center gap-2.5">
+                      <UserCheck className="w-4 h-4 text-indigo-400" />
+                      <span>1. Shortlist Notice Email</span>
                     </div>
-                    {examData.status === "completed" && (
-                      <div className="flex items-center justify-between text-violet-300 font-bold font-mono">
-                        <span>AI Auto-Score:</span>
-                        <span className="text-sm">{examData.score}%</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  {/* Button 2: Custom & AI Exam Configurator */}
+                  <button
+                    onClick={() => handleOpenStageModal("exam_config")}
+                    className="w-full py-2.5 px-4 rounded-2xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Sliders className="w-4 h-4 text-violet-400" />
+                      <span>2. Custom AI Exam Configurator</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  {/* Button 3: Pass Round 1 & Schedule Interview */}
+                  <button
+                    onClick={() => handleOpenStageModal("round1_passed")}
+                    className="w-full py-2.5 px-4 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <FileCheck className="w-4 h-4 text-emerald-400" />
+                      <span>3. Pass Round 1 & Jitsi Schedule</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  {/* Button 4: Direct Video Interview Link */}
+                  <button
+                    onClick={() => handleOpenStageModal("interview")}
+                    className="w-full py-2.5 px-4 rounded-2xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Video className="w-4 h-4 text-cyan-400" />
+                      <span>4. Direct Video Interview Link Email</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  {/* Button 5: Final Offer Letter */}
+                  <button
+                    onClick={() => handleOpenStageModal("offer")}
+                    className="w-full py-2.5 px-4 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold text-xs flex items-center justify-between transition cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Award className="w-4 h-4 text-amber-400" />
+                      <span>5. Send Official Offer Letter Email</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                </div>
               </div>
 
-              {/* ACADEMICS & METRICS */}
-              <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-[#0F1012] border border-[#272930]">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-zinc-400">Academic CGPA</span>
-                  <div className="text-base font-serif font-bold text-violet-300">
-                    {resume.cgpa ? `${resume.cgpa} / 10` : "N/A"}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-zinc-400">Pipeline Status</span>
-                  <div className="text-xs font-semibold text-emerald-400 flex items-center gap-1 mt-1 capitalize">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    {resume.hiringStatus || "Shortlisted"}
-                  </div>
-                </div>
-              </div>
-
-              {/* AI INSIGHT */}
+              {/* EDITORIAL AI INSIGHT */}
               {resume.reason && (
                 <div className="bg-violet-950/20 border border-violet-800/40 rounded-2xl p-4 space-y-2 text-xs">
                   <div className="flex items-center gap-1.5 text-violet-400 font-mono text-[10px] uppercase">
@@ -508,7 +671,7 @@ const CandidateDetails = () => {
                 </div>
               )}
 
-              {/* SKILLS */}
+              {/* SKILLS TAGS */}
               <div className="space-y-3">
                 <h3 className="text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
                   <Award className="w-4 h-4 text-violet-400" />
@@ -533,7 +696,7 @@ const CandidateDetails = () => {
 
           </motion.div>
 
-          {/* RIGHT COLUMN: PDF VIEWER */}
+          {/* RIGHT COLUMN: PDF VIEWER / PARSED TEXT FALLBACK */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
@@ -541,12 +704,12 @@ const CandidateDetails = () => {
             className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col justify-between min-h-[650px]"
           >
             
-            {/* PDF CONTROLS */}
+            {/* VIEW CONTROLS */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#272930] pb-4 mb-4 text-xs text-zinc-400">
               <div className="flex items-center space-x-2">
                 <FileText className="w-4 h-4 text-violet-400" />
-                <span className="font-serif italic font-normal text-white text-base truncate max-w-[200px]">
-                  Resume Document Preview
+                <span className="font-serif italic font-normal text-white text-base truncate max-w-[240px]">
+                  {pdfError ? "Parsed Resume Text & Summary" : "Resume Document Preview"}
                 </span>
               </div>
 
@@ -564,55 +727,58 @@ const CandidateDetails = () => {
                   >
                     Embedded
                   </button>
+                  <button
+                    onClick={() => setViewMode("text")}
+                    className={`px-3 py-1 rounded-full transition-all cursor-pointer ${viewMode === "text" ? "bg-violet-600 text-white font-semibold" : "text-zinc-400 hover:text-white"}`}
+                  >
+                    Parsed Text
+                  </button>
                 </div>
-
-                {viewMode === "canvas" && numPages && (
-                  <div className="flex items-center gap-1 bg-[#0F1012] px-3 py-1 rounded-full border border-[#272930]">
-                    <button
-                      onClick={() => setPageNumber((p) => Math.max(p - 1, 1))}
-                      disabled={pageNumber <= 1}
-                      className="hover:text-white disabled:opacity-30 cursor-pointer"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="text-[11px] text-zinc-300 font-mono px-1">
-                      {pageNumber} / {numPages}
-                    </span>
-                    <button
-                      onClick={() => setPageNumber((p) => Math.min(p + 1, numPages))}
-                      disabled={pageNumber >= numPages}
-                      className="hover:text-white disabled:opacity-30 cursor-pointer"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* PDF DISPLAY */}
-            <div className="flex-1 flex justify-center items-center bg-[#0F1012] rounded-2xl border border-[#272930] p-2 overflow-auto min-h-[550px] max-h-[750px]">
-              {pdfUrl ? (
-                pdfError ? (
-                  <div className="text-center p-8 max-w-md bg-[#16171B] border border-[#272930] rounded-2xl space-y-4 shadow-xl">
-                    <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto">
-                      <FileText className="w-6 h-6" />
-                    </div>
+            {/* DOCUMENT / FALLBACK TEXT DISPLAY */}
+            <div className="flex-1 flex justify-center items-center bg-[#0F1012] rounded-2xl border border-[#272930] p-4 overflow-auto min-h-[550px] max-h-[750px]">
+              {viewMode === "text" || pdfError ? (
+                /* PARSED RESUME TEXT FALLBACK VIEWER (handles 404 missing PDFs gracefully) */
+                <div className="w-full space-y-6 text-left font-sans text-xs text-zinc-300">
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 shrink-0" />
                     <div>
-                      <h4 className="font-serif text-lg text-white mb-1">Resume File Missing (404)</h4>
-                      <p className="text-xs text-zinc-400 leading-relaxed mb-2 font-sans">
-                        The file <code className="text-violet-300 font-mono text-[11px] bg-[#0F1012] px-1.5 py-0.5 rounded border border-[#272930]">{cleanFilePath}</code> was not found on backend storage.
+                      <div className="font-bold text-sm">Parsed Candidate Resume Content</div>
+                      <div className="text-[11px] text-amber-200 mt-0.5">
+                        {pdfError
+                          ? "Original PDF file binary is missing from backend disk storage (404). Viewing parsed candidate text below."
+                          : "Displaying extracted raw resume text & AI synopsis."}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI SUMMARY BOX */}
+                  {resume.summary && (
+                    <div className="bg-[#16171B] border border-[#272930] rounded-2xl p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-violet-400 font-mono text-[10px] uppercase">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Gemini Professional Summary</span>
+                      </div>
+                      <p className="font-serif italic text-base text-white leading-relaxed">
+                        "{resume.summary}"
                       </p>
                     </div>
-                    <button
-                      onClick={() => navigate("/")}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs rounded-full transition-all cursor-pointer shadow-md"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      Back to Candidate Matcher
-                    </button>
+                  )}
+
+                  {/* RAW RESUME TEXT */}
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                      Extracted Full Resume Text Snippet:
+                    </div>
+                    <div className="bg-[#16171B] border border-[#272930] rounded-2xl p-4 font-mono text-[11px] leading-relaxed text-zinc-300 whitespace-pre-wrap max-h-96 overflow-y-auto">
+                      {resume.resumeText || "No plain text extracted from resume document."}
+                    </div>
                   </div>
-                ) : viewMode === "canvas" ? (
+                </div>
+              ) : pdfUrl ? (
+                viewMode === "canvas" ? (
                   <Document
                     file={pdfUrl}
                     onLoadSuccess={onDocumentLoadSuccess}
@@ -642,108 +808,558 @@ const CandidateDetails = () => {
               ) : (
                 <div className="text-center p-8 text-zinc-500 text-xs flex flex-col items-center gap-2 font-sans">
                   <FileText className="w-8 h-8 opacity-40" />
-                  PDF file path missing or unavailable.
+                  PDF file path missing. Switching to parsed text view above.
                 </div>
               )}
             </div>
+
           </motion.div>
 
         </div>
 
       </div>
 
-      {/* SCHEDULE INTERVIEW MODAL */}
-      <AnimatePresence>
-        {scheduleModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6"
-            >
-              <div className="flex items-center justify-between border-b border-[#272930] pb-4">
-                <div className="flex items-center space-x-2">
-                  <Video className="w-5 h-5 text-emerald-400" />
-                  <h3 className="font-serif text-xl text-white">Schedule Live Jitsi Interview</h3>
+      {/* ========================================================================= */}
+      {/* MODAL 1: SHORTLIST & ASSESSMENT DATE NOTICE */}
+      {/* ========================================================================= */}
+      {activeModal === "shortlist" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F1012]/80 backdrop-blur-md">
+          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl relative space-y-6">
+            <div className="flex items-center justify-between border-b border-[#272930] pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                  <UserCheck className="w-5 h-5" />
                 </div>
-                <button
-                  onClick={() => setScheduleModalOpen(false)}
-                  className="text-zinc-400 hover:text-white p-1"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div>
+                  <h3 className="font-serif text-xl text-white">Shortlist & Assessment Date Email</h3>
+                  <p className="text-xs text-zinc-400">Sending to {resume.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="text-zinc-400 hover:text-white transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs font-sans">
+              <div className="p-3.5 rounded-2xl bg-[#0F1012] border border-[#272930] text-zinc-300 leading-relaxed">
+                <strong>Mail Subject:</strong> ✨ Good News! Your Resume Has Been Shortlisted - Online Assessment Schedule
               </div>
 
-              <div className="space-y-4 text-xs font-sans">
-                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 space-y-1">
-                  <p className="font-bold text-sm">Exam Passed Email Notification</p>
-                  <p className="text-[11px] text-zinc-400">
-                    Candidate <strong>{resume.name}</strong> will receive an email stating they passed the technical exam with their scheduled meeting date/time and direct Jitsi video room link.
-                  </p>
-                </div>
-
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-zinc-400 font-mono text-[10px] uppercase mb-1">
-                    Candidate Email
-                  </label>
+                  <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Assessment Date *</label>
                   <input
-                    type="email"
-                    value={candidateEmail}
-                    onChange={(e) => setCandidateEmail(e.target.value)}
-                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
+                    type="date"
+                    value={shortlistForm.scheduledDate}
+                    onChange={(e) => setShortlistForm({ ...shortlistForm, scheduledDate: e.target.value })}
+                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Assessment Time *</label>
+                  <input
+                    type="time"
+                    value={shortlistForm.scheduledTime}
+                    onChange={(e) => setShortlistForm({ ...shortlistForm, scheduledTime: e.target.value })}
+                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">HR Custom Message / Instructions</label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Please be ready with a stable internet connection and webcam..."
+                  value={shortlistForm.customNotes}
+                  onChange={(e) => setShortlistForm({ ...shortlistForm, customNotes: e.target.value })}
+                  className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-4 py-2 rounded-full text-xs text-zinc-400 hover:text-white transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendShortlistNotice}
+                disabled={actionLoading || !shortlistForm.scheduledDate}
+                className="px-6 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{actionLoading ? "Sending..." : "Send Shortlist Email"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: CUSTOM & AI EXAM CONFIGURATOR & EDITABLE QUESTIONS EDITOR */}
+      {/* ========================================================================= */}
+      {activeModal === "exam_config" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F1012]/80 backdrop-blur-md">
+          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 sm:p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative space-y-6">
+            
+            <div className="flex items-center justify-between border-b border-[#272930] pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                  <Sliders className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl text-white">Custom Exam Generator & Live Question Editor</h3>
+                  <p className="text-xs text-zinc-400">Configure duration, MCQ/Coding counts, AI generation & manual edits</p>
+                </div>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="text-zinc-400 hover:text-white transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Parameters */}
+            <div className="bg-[#0F1012] border border-[#272930] rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs font-sans">
+              <div>
+                <label className="block text-zinc-400 font-mono uppercase text-[10px] mb-1">Duration (Min)</label>
+                <select
+                  value={examConfig.durationMinutes}
+                  onChange={(e) => setExamConfig({ ...examConfig, durationMinutes: Number(e.target.value) })}
+                  className="w-full bg-[#16171B] border border-[#272930] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                >
+                  <option value={10}>10 Minutes</option>
+                  <option value={15}>15 Minutes</option>
+                  <option value={30}>30 Minutes</option>
+                  <option value={45}>45 Minutes</option>
+                  <option value={60}>60 Minutes</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 font-mono uppercase text-[10px] mb-1">MCQ Count</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={examConfig.mcqCount}
+                  onChange={(e) => setExamConfig({ ...examConfig, mcqCount: Number(e.target.value) })}
+                  className="w-full bg-[#16171B] border border-[#272930] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 font-mono uppercase text-[10px] mb-1">Coding Count</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={examConfig.codingCount}
+                  onChange={(e) => setExamConfig({ ...examConfig, codingCount: Number(e.target.value) })}
+                  className="w-full bg-[#16171B] border border-[#272930] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 font-mono uppercase text-[10px] mb-1">Link Expiry (Hours)</label>
+                <select
+                  value={examConfig.linkExpiryHours}
+                  onChange={(e) => setExamConfig({ ...examConfig, linkExpiryHours: Number(e.target.value) })}
+                  className="w-full bg-[#16171B] border border-[#272930] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                >
+                  <option value={24}>24 Hours</option>
+                  <option value={48}>48 Hours</option>
+                  <option value={72}>72 Hours</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={() => handleGenerateAiQuestions()}
+                  disabled={generatingAiQuestions}
+                  className="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition disabled:opacity-50 cursor-pointer shadow-md"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{generatingAiQuestions ? "Generating..." : "Generate AI"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Questions Toolbar */}
+            <div className="flex items-center justify-between border-b border-[#272930] pb-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-serif font-normal text-white text-base">Questions List ({examQuestions.length})</span>
+                <span className="text-zinc-400 text-[11px] font-mono">HR Editable</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAddCustomMcq}
+                  className="px-3 py-1.5 bg-[#0F1012] hover:bg-zinc-800 text-violet-300 border border-violet-500/30 rounded-full font-medium transition cursor-pointer flex items-center gap-1 text-[11px]"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Custom MCQ</span>
+                </button>
+
+                <button
+                  onClick={handleAddCustomCoding}
+                  className="px-3 py-1.5 bg-[#0F1012] hover:bg-zinc-800 text-cyan-300 border border-cyan-500/30 rounded-full font-medium transition cursor-pointer flex items-center gap-1 text-[11px]"
+                >
+                  <Code2 className="w-3 h-3" />
+                  <span>Add Coding Challenge</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Questions Editor List */}
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+              {examQuestions.map((q, qIdx) => (
+                <div key={q.id || qIdx} className="bg-[#0F1012] border border-[#272930] rounded-2xl p-4 space-y-3 relative font-sans text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-violet-600/20 text-violet-300 font-mono font-bold flex items-center justify-center">
+                        Q{qIdx + 1}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase ${q.type === 'coding' ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' : 'bg-violet-500/10 text-violet-300 border border-violet-500/20'}`}>
+                        {q.type === 'coding' ? 'Coding Challenge' : 'Multiple Choice (MCQ)'}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteQuestion(qIdx)}
+                      className="text-zinc-500 hover:text-rose-400 p-1 transition"
+                      title="Delete Question"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono text-zinc-400 uppercase mb-1">Question Prompt</label>
+                    <textarea
+                      rows={2}
+                      value={q.questionText}
+                      onChange={(e) => handleUpdateQuestionText(qIdx, e.target.value)}
+                      className="w-full bg-[#16171B] border border-[#272930] rounded-xl p-2.5 text-white focus:outline-none focus:border-violet-500"
+                    />
+                  </div>
+
+                  {q.type === "mcq" && (
+                    <div className="space-y-2 pt-1">
+                      <label className="block text-[10px] font-mono text-zinc-400 uppercase">Options (Select radio for correct answer)</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {q.options?.map((opt, optIdx) => (
+                          <div key={optIdx} className="flex items-center gap-2 bg-[#16171B] border border-[#272930] rounded-xl px-2.5 py-1.5">
+                            <input
+                              type="radio"
+                              name={`correct_${qIdx}`}
+                              checked={q.correctOptionIndex === optIdx}
+                              onChange={() => handleUpdateCorrectOption(qIdx, optIdx)}
+                              className="accent-violet-500 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={opt}
+                              onChange={(e) => handleUpdateMcqOption(qIdx, optIdx, e.target.value)}
+                              className="w-full bg-transparent text-xs text-white focus:outline-none"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {q.type === "coding" && (
+                    <div className="space-y-2 pt-1">
+                      <label className="block text-[10px] font-mono text-zinc-400 uppercase">JavaScript Starter Code</label>
+                      <textarea
+                        rows={3}
+                        value={q.starterCode}
+                        onChange={(e) => handleUpdateCodingStarter(qIdx, e.target.value)}
+                        className="w-full bg-[#16171B] border border-[#272930] rounded-xl p-2.5 font-mono text-xs text-emerald-400 focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-[#272930]">
+              <div className="text-xs text-zinc-400">
+                Sending custom exam link to <strong>{resume.name}</strong>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setActiveModal(null)}
+                  className="px-4 py-2 rounded-full text-xs text-zinc-400 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendConfiguredExam}
+                  disabled={actionLoading || examQuestions.length === 0}
+                  className="px-6 py-2.5 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{actionLoading ? "Sending Invites..." : "Send Configured Exam"}</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 3: TECHNICAL ROUND 1 PASSED & JITSI INTERVIEW SCHEDULE */}
+      {/* ========================================================================= */}
+      {activeModal === "round1_passed" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F1012]/80 backdrop-blur-md">
+          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 sm:p-8 w-full max-w-xl shadow-2xl relative space-y-6">
+            <div className="flex items-center justify-between border-b border-[#272930] pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  <FileCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl text-white">Pass Technical Round 1 & Schedule Interview</h3>
+                  <p className="text-xs text-zinc-400">Sends Round 1 clearance notice & Jitsi Meet join link</p>
+                </div>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="text-zinc-400 hover:text-white transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-[#0F1012] border border-[#272930] rounded-2xl p-4 text-xs font-sans space-y-1">
+              <div className="text-[10px] font-mono text-zinc-400 uppercase">Candidate Assessment Result:</div>
+              <div className="flex items-center justify-between text-zinc-200">
+                <span className="font-bold">{resume.name} ({candidateEmail})</span>
+                <span className="font-mono text-emerald-400 font-bold">
+                  {resume.examScore !== null && resume.examScore !== undefined ? `${resume.examScore}% Score` : "Score Pending"}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4 text-xs font-sans">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Interview Date *</label>
+                  <input
+                    type="date"
+                    value={round1Form.scheduledDate}
+                    onChange={(e) => setRound1Form({ ...round1Form, scheduledDate: e.target.value })}
+                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Interview Time *</label>
+                  <input
+                    type="time"
+                    value={round1Form.scheduledTime}
+                    onChange={(e) => setRound1Form({ ...round1Form, scheduledTime: e.target.value })}
+                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Jitsi Meet Video Link (Optional override)</label>
+                <input
+                  type="text"
+                  placeholder="https://meet.jit.si/TalentAI-Interview-Room (Auto-generated if empty)"
+                  value={round1Form.customMeetUrl}
+                  onChange={(e) => setRound1Form({ ...round1Form, customMeetUrl: e.target.value })}
+                  className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-4 py-2 rounded-full text-xs text-zinc-400 hover:text-white transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendRound1Passed}
+                disabled={actionLoading || !round1Form.scheduledDate}
+                className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{actionLoading ? "Sending..." : "Send Round 1 Passed Email"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 4: DIRECT ONLINE VIDEO INTERVIEW LINK */}
+      {/* ========================================================================= */}
+      {activeModal === "interview" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F1012]/80 backdrop-blur-md">
+          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl relative space-y-6">
+            <div className="flex items-center justify-between border-b border-[#272930] pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                  <Video className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl text-white">Direct Video Interview Link Email</h3>
+                  <p className="text-xs text-zinc-400">Sending to {resume.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="text-zinc-400 hover:text-white transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs font-sans">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Scheduled Date *</label>
+                  <input
+                    type="date"
+                    value={interviewForm.scheduledDate}
+                    onChange={(e) => setInterviewForm({ ...interviewForm, scheduledDate: e.target.value })}
+                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Scheduled Time *</label>
+                  <input
+                    type="time"
+                    value={interviewForm.scheduledTime}
+                    onChange={(e) => setInterviewForm({ ...interviewForm, scheduledTime: e.target.value })}
+                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Jitsi Meet URL (Optional custom room)</label>
+                <input
+                  type="text"
+                  placeholder="https://meet.jit.si/TalentAI-Interview (Auto-generated if left empty)"
+                  value={interviewForm.customMeetUrl}
+                  onChange={(e) => setInterviewForm({ ...interviewForm, customMeetUrl: e.target.value })}
+                  className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-4 py-2 rounded-full text-xs text-zinc-400 hover:text-white transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendVideoInterviewInvite}
+                disabled={actionLoading || !interviewForm.scheduledDate}
+                className="px-6 py-2.5 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{actionLoading ? "Sending..." : "Send Video Join Link"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 5: FINAL OFFER LETTER EMAIL */}
+      {/* ========================================================================= */}
+      {activeModal === "offer" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F1012]/80 backdrop-blur-md">
+          <div className="bg-[#16171B] border border-[#272930] rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl relative space-y-6">
+            <div className="flex items-center justify-between border-b border-[#272930] pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl text-white">Send Official Offer Letter Email</h3>
+                  <p className="text-xs text-zinc-400">Sending to {resume.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="text-zinc-400 hover:text-white transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs font-sans">
+              <div>
+                <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Designation / Role Title *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Senior Full Stack Engineer"
+                  value={offerForm.roleCategory}
+                  onChange={(e) => setOfferForm({ ...offerForm, roleCategory: e.target.value })}
+                  className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Compensation / CTC *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 12 LPA or $110,000 / year"
+                    value={offerForm.ctc}
+                    onChange={(e) => setOfferForm({ ...offerForm, ctc: e.target.value })}
+                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-zinc-400 font-mono text-[10px] uppercase mb-1 flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-violet-400" />
-                      Select Date
-                    </label>
-                    <input
-                      type="date"
-                      value={scheduledDate}
-                      onChange={(e) => setScheduledDate(e.target.value)}
-                      className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-zinc-400 font-mono text-[10px] uppercase mb-1 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-violet-400" />
-                      Select Time
-                    </label>
-                    <input
-                      type="time"
-                      value={scheduledTime}
-                      onChange={(e) => setScheduledTime(e.target.value)}
-                      className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">Joining Date *</label>
+                  <input
+                    type="date"
+                    value={offerForm.joiningDate}
+                    onChange={(e) => setOfferForm({ ...offerForm, joiningDate: e.target.value })}
+                    className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500"
+                  />
                 </div>
-
-                <button
-                  onClick={handleSendScheduledInterview}
-                  disabled={sendingInterviewInvite}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer transition shadow-xl mt-2"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>{sendingInterviewInvite ? "Sending Email..." : "Send Assessment Passed & Jitsi Meeting Email"}</span>
-                </button>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
-      <InterviewModal
-        isOpen={isInterviewOpen}
-        onClose={() => setIsInterviewOpen(false)}
-        candidate={resume}
-        exam={examData}
-        onUpdate={fetchExamData}
-      />
+              <div>
+                <label className="block text-zinc-300 font-mono uppercase text-[10px] mb-1.5">HR Welcome Message</label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. We were thoroughly impressed by your performance..."
+                  value={offerForm.hrMessage}
+                  onChange={(e) => setOfferForm({ ...offerForm, hrMessage: e.target.value })}
+                  className="w-full bg-[#0F1012] border border-[#272930] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-4 py-2 rounded-full text-xs text-zinc-400 hover:text-white transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendOfferLetter}
+                disabled={actionLoading || !offerForm.roleCategory || !offerForm.joiningDate}
+                className="px-6 py-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{actionLoading ? "Sending..." : "Send Offer Letter Email"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
