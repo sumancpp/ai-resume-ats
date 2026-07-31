@@ -34,6 +34,7 @@ export default function TakeExam() {
     const [currentQIndex, setCurrentQIndex] = useState(0)
     const [answers, setAnswers] = useState({})
     const [codeSubmissions, setCodeSubmissions] = useState({})
+    const [selectedLanguages, setSelectedLanguages] = useState({})
     const [testResults, setTestResults] = useState({})
     const [runningCode, setRunningCode] = useState(false)
     const [submitting, setSubmitting] = useState(false)
@@ -130,14 +131,47 @@ export default function TakeExam() {
         setCodeSubmissions((prev) => ({ ...prev, [questionId]: code }))
     }
 
+    const handleLanguageChange = (questionId, newLang) => {
+        setSelectedLanguages((prev) => ({ ...prev, [questionId]: newLang }))
+        const currentCode = codeSubmissions[questionId] || ""
+
+        if (newLang === "python") {
+            if (!currentCode || currentCode.includes("function solution")) {
+                setCodeSubmissions((prev) => ({
+                    ...prev,
+                    [questionId]: "def solution(arg):\n    # Write your solution in Python 3\n    return arg"
+                }))
+            }
+        } else if (newLang === "javascript") {
+            if (!currentCode || currentCode.includes("def solution")) {
+                setCodeSubmissions((prev) => ({
+                    ...prev,
+                    [questionId]: "function solution(arg) {\n  // Write your solution in JavaScript\n  return arg;\n}"
+                }))
+            }
+        } else if (newLang === "cpp") {
+            setCodeSubmissions((prev) => ({
+                ...prev,
+                [questionId]: "// C++ Solution\n#include <iostream>\n#include <vector>\nusing namespace std;\n\n// Write your solution function here\n"
+            }))
+        } else if (newLang === "java") {
+            setCodeSubmissions((prev) => ({
+                ...prev,
+                [questionId]: "// Java Solution\npublic class Solution {\n    public Object solution(Object arg) {\n        // Write your solution here\n        return arg;\n    }\n}"
+            }))
+        }
+    }
+
     const handleRunTest = async (question) => {
         setRunningCode(true)
         try {
             const backendUrl = getBackendUrl()
             const code = codeSubmissions[question.id] || ""
+            const language = selectedLanguages[question.id] || "javascript"
             const res = await axios.post(`${backendUrl}/api/exams/run-code`, {
                 code,
-                testCases: question.testCases
+                testCases: question.testCases,
+                language
             })
 
             setTestResults((prev) => ({
@@ -386,11 +420,24 @@ export default function TakeExam() {
                             {/* Live Code Editor */}
                             {currentQ.type === "coding" && (
                                 <div className="space-y-4 pt-2">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                                        <div className="flex items-center gap-3">
                                             <FileCode className="w-4 h-4 text-indigo-400" />
-                                            JavaScript Solution Editor
-                                        </label>
+                                            <span className="text-xs font-bold uppercase text-slate-300">Solution Code Editor</span>
+                                            
+                                            {/* LANGUAGE SELECTOR */}
+                                            <select
+                                                value={selectedLanguages[currentQ.id] || "javascript"}
+                                                onChange={(e) => handleLanguageChange(currentQ.id, e.target.value)}
+                                                className="bg-slate-900 border border-indigo-500/40 text-indigo-300 font-mono text-xs font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-400 cursor-pointer"
+                                            >
+                                                <option value="javascript">JavaScript (Node.js)</option>
+                                                <option value="python">Python 3</option>
+                                                <option value="cpp">C++</option>
+                                                <option value="java">Java</option>
+                                            </select>
+                                        </div>
+
                                         <button
                                             onClick={() => handleRunTest(currentQ)}
                                             disabled={runningCode}
@@ -406,7 +453,7 @@ export default function TakeExam() {
                                         onChange={(e) => handleCodeChange(currentQ.id, e.target.value)}
                                         rows={10}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-sm text-indigo-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                                        placeholder="// Write your solution function here..."
+                                        placeholder="// Write your solution function in your chosen language..."
                                     />
 
                                     {/* Test Results Banner */}

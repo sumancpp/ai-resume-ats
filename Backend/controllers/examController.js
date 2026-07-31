@@ -2,7 +2,7 @@ import crypto from "crypto"
 import Exam from "../models/Exam.js"
 import Resume from "../models/Resume.js"
 import { generateExamQuestions, evaluateExamSubmission } from "../ai/examAiService.js"
-import { runJsCode } from "../helpers/codeRunner.js"
+import { runCode } from "../helpers/codeRunner.js"
 import {
     sendExamInviteEmail,
     sendHiringConfirmationEmail,
@@ -281,13 +281,13 @@ export const startExam = async (req, res) => {
  */
 export const runCodeTest = async (req, res) => {
     try {
-        const { code, testCases } = req.body
+        const { code, testCases, language } = req.body
 
         if (!code || typeof code !== "string") {
             return res.status(400).json({ success: false, message: "Code string required" })
         }
 
-        const testResults = runJsCode(code, testCases || [])
+        const testResults = runCode(code, testCases || [], language || "javascript")
 
         const passedCount = testResults.filter((r) => r.passed).length
 

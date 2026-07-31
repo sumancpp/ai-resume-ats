@@ -265,8 +265,8 @@ const Dashboard = () => {
     const newCoding = {
       id: `q_${Date.now()}`,
       type: "coding",
-      questionText: "Write a JavaScript function solution(arr) that returns the sum of all elements.",
-      starterCode: "function solution(arr) {\n  // Write your code here\n  return 0;\n}",
+      questionText: "Problem: Array Element Sum. Given an array of integers arr, return the sum of all elements.",
+      starterCode: "function solution(arr) {\n  // Write your solution here\n  return 0;\n}",
       testCases: [
         { input: "[1, 2, 3, 4]", expectedOutput: "10", description: "Sum positive integers" },
         { input: "[-5, 5]", expectedOutput: "0", description: "Sum negative and positive" }
@@ -503,8 +503,8 @@ const Dashboard = () => {
               onClick={() => openStageModal("everyone", resumes)}
               className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs rounded-full flex items-center gap-2 transition cursor-pointer shadow-lg border border-violet-400/30"
             >
-              <Mail className="w-4 h-4 text-violet-200" />
               <span>Send Mail to Everyone ({totalResumes})</span>
+              <Send className="w-4 h-4 text-violet-200" />
             </motion.button>
 
             <motion.button
@@ -598,7 +598,10 @@ const Dashboard = () => {
                 <UserCheck className="w-4 h-4" />
               </div>
               <div>
-                <div className="font-bold">1. Shortlist Notice</div>
+                <div className="font-bold flex items-center justify-center gap-1.5">
+                  <span>1. Shortlist Notice</span>
+                  <Send className="w-3 h-3 text-indigo-400" />
+                </div>
                 <div className="text-[10px] text-zinc-400 font-normal mt-0.5">Schedule Assessment Date</div>
               </div>
             </motion.button>
@@ -614,7 +617,10 @@ const Dashboard = () => {
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <div className="font-bold">2. Exam Configurator</div>
+                <div className="font-bold flex items-center justify-center gap-1.5">
+                  <span>2. Exam Configurator</span>
+                  <Send className="w-3 h-3 text-violet-400" />
+                </div>
                 <div className="text-[10px] text-zinc-400 font-normal mt-0.5">Custom/AI Questions & Time</div>
               </div>
             </motion.button>
@@ -630,7 +636,10 @@ const Dashboard = () => {
                 <FileCheck className="w-4 h-4" />
               </div>
               <div>
-                <div className="font-bold">3. Pass Round 1</div>
+                <div className="font-bold flex items-center justify-center gap-1.5">
+                  <span>3. Pass Round 1</span>
+                  <Send className="w-3 h-3 text-emerald-400" />
+                </div>
                 <div className="text-[10px] text-zinc-400 font-normal mt-0.5">Scores & Jitsi Meet Schedule</div>
               </div>
             </motion.button>
@@ -646,7 +655,10 @@ const Dashboard = () => {
                 <Video className="w-4 h-4" />
               </div>
               <div>
-                <div className="font-bold">4. Video Interview Link</div>
+                <div className="font-bold flex items-center justify-center gap-1.5">
+                  <span>4. Video Interview Link</span>
+                  <Send className="w-3 h-3 text-cyan-400" />
+                </div>
                 <div className="text-[10px] text-zinc-400 font-normal mt-0.5">Jitsi Meeting Join Link</div>
               </div>
             </motion.button>
@@ -662,7 +674,10 @@ const Dashboard = () => {
                 <Award className="w-4 h-4" />
               </div>
               <div>
-                <div className="font-bold">5. Send Offer Letter</div>
+                <div className="font-bold flex items-center justify-center gap-1.5">
+                  <span>5. Send Offer Letter</span>
+                  <Send className="w-3 h-3 text-amber-400" />
+                </div>
                 <div className="text-[10px] text-zinc-400 font-normal mt-0.5">CTC & Selection Offer</div>
               </div>
             </motion.button>
@@ -892,16 +907,27 @@ const Dashboard = () => {
                           </div>
                         </td>
 
-                        {/* Individual Candidate Actions Dropdown */}
+                        {/* Individual Candidate Actions Dropdown & Direct Join */}
                         <td className="py-4 px-4 text-right relative">
                           <div className="inline-flex items-center gap-2">
+                            <a
+                              href={`https://meet.jit.si/TalentAI-Interview-${resume._id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow"
+                              title="HR Direct Join Live Jitsi Interview Room"
+                            >
+                              <Video className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>Join Jitsi</span>
+                            </a>
+
                             <button
                               onClick={() => setOpenRowDropdown(isDropdownOpen ? null : resume._id)}
                               className="px-3 py-1.5 rounded-full bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
                             >
-                              <Mail className="w-3.5 h-3.5" />
                               <span>Send Mail</span>
-                              <ChevronDown className="w-3 h-3" />
+                              <Send className="w-3.5 h-3.5" />
+                              <ChevronDown className="w-3 h-3 ml-0.5" />
                             </button>
 
                             <button
@@ -915,50 +941,80 @@ const Dashboard = () => {
 
                           {/* Row Dropdown Menu */}
                           {isDropdownOpen && (
-                            <div className="absolute right-4 top-12 z-40 w-56 bg-[#16171B] border border-[#272930] rounded-2xl shadow-2xl p-2 space-y-1 text-left font-sans text-xs">
+                            <div className="absolute right-4 top-12 z-40 w-64 bg-[#16171B] border border-[#272930] rounded-2xl shadow-2xl p-2 space-y-1 text-left font-sans text-xs">
                               <div className="px-2 py-1 text-[10px] font-mono uppercase text-zinc-400 border-b border-[#272930]">
                                 Candidate Stage Mails
                               </div>
 
                               <button
                                 onClick={() => openStageModal("shortlist", [resume])}
-                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-indigo-500/10 text-indigo-300 flex items-center gap-2 transition"
+                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-indigo-500/10 text-indigo-300 flex items-center justify-between transition cursor-pointer"
                               >
-                                <UserCheck className="w-3.5 h-3.5" />
-                                <span>1. Shortlist Notice</span>
+                                <div className="flex items-center gap-2">
+                                  <UserCheck className="w-3.5 h-3.5 text-indigo-400" />
+                                  <span>1. Shortlist Notice</span>
+                                </div>
+                                <Send className="w-3.5 h-3.5 text-indigo-400" />
                               </button>
 
                               <button
                                 onClick={() => openStageModal("exam_config", [resume])}
-                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-violet-500/10 text-violet-300 flex items-center gap-2 transition"
+                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-violet-500/10 text-violet-300 flex items-center justify-between transition cursor-pointer"
                               >
-                                <Sliders className="w-3.5 h-3.5" />
-                                <span>2. Custom AI Exam</span>
+                                <div className="flex items-center gap-2">
+                                  <Sliders className="w-3.5 h-3.5 text-violet-400" />
+                                  <span>2. Custom AI Exam</span>
+                                </div>
+                                <Send className="w-3.5 h-3.5 text-violet-400" />
                               </button>
 
                               <button
                                 onClick={() => openStageModal("round1_passed", [resume])}
-                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-emerald-500/10 text-emerald-300 flex items-center gap-2 transition"
+                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-emerald-500/10 text-emerald-300 flex items-center justify-between transition cursor-pointer"
                               >
-                                <FileCheck className="w-3.5 h-3.5" />
-                                <span>3. Pass Round 1 & Schedule</span>
+                                <div className="flex items-center gap-2">
+                                  <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span>3. Pass Round 1 & Schedule</span>
+                                </div>
+                                <Send className="w-3.5 h-3.5 text-emerald-400" />
                               </button>
 
                               <button
                                 onClick={() => openStageModal("interview", [resume])}
-                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-cyan-500/10 text-cyan-300 flex items-center gap-2 transition"
+                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-cyan-500/10 text-cyan-300 flex items-center justify-between transition cursor-pointer"
                               >
-                                <Video className="w-3.5 h-3.5" />
-                                <span>4. Send Video Link</span>
+                                <div className="flex items-center gap-2">
+                                  <Video className="w-3.5 h-3.5 text-cyan-400" />
+                                  <span>4. Send Video Link</span>
+                                </div>
+                                <Send className="w-3.5 h-3.5 text-cyan-400" />
                               </button>
 
                               <button
                                 onClick={() => openStageModal("offer", [resume])}
-                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-500/10 text-amber-300 flex items-center gap-2 transition"
+                                className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-500/10 text-amber-300 flex items-center justify-between transition cursor-pointer"
                               >
-                                <Award className="w-3.5 h-3.5" />
-                                <span>5. Send Offer Letter</span>
+                                <div className="flex items-center gap-2">
+                                  <Award className="w-3.5 h-3.5 text-amber-400" />
+                                  <span>5. Send Offer Letter</span>
+                                </div>
+                                <Send className="w-3.5 h-3.5 text-amber-400" />
                               </button>
+
+                              <div className="pt-1 border-t border-[#272930]">
+                                <a
+                                  href={`https://meet.jit.si/TalentAI-Interview-${resume._id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-full px-3 py-2 rounded-xl hover:bg-cyan-500/10 text-cyan-300 flex items-center justify-between transition cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2 font-bold">
+                                    <Video className="w-3.5 h-3.5 text-cyan-400" />
+                                    <span>Join Jitsi Video Room</span>
+                                  </div>
+                                  <ExternalLink className="w-3 h-3 opacity-60" />
+                                </a>
+                              </div>
                             </div>
                           )}
                         </td>
@@ -1044,8 +1100,8 @@ const Dashboard = () => {
                 disabled={actionLoading || !shortlistForm.scheduledDate}
                 className="px-6 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
                 <span>{actionLoading ? "Sending..." : `Send Shortlist Email (${targetCandidates.length})`}</span>
+                <Send className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -1261,8 +1317,8 @@ const Dashboard = () => {
                   disabled={actionLoading || examQuestions.length === 0}
                   className="px-6 py-2.5 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
-                  <Send className="w-3.5 h-3.5" />
                   <span>{actionLoading ? "Sending Invites..." : `Send Configured Exam (${targetCandidates.length})`}</span>
+                  <Send className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -1353,8 +1409,8 @@ const Dashboard = () => {
                 disabled={actionLoading || !round1Form.scheduledDate}
                 className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
                 <span>{actionLoading ? "Sending..." : `Send Round 1 Passed Email (${targetCandidates.length})`}</span>
+                <Send className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -1428,8 +1484,8 @@ const Dashboard = () => {
                 disabled={actionLoading || !interviewForm.scheduledDate}
                 className="px-6 py-2.5 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
                 <span>{actionLoading ? "Sending..." : `Send Video Join Link (${targetCandidates.length})`}</span>
+                <Send className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -1516,8 +1572,8 @@ const Dashboard = () => {
                 disabled={actionLoading || !offerForm.roleCategory || !offerForm.joiningDate}
                 className="px-6 py-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
                 <span>{actionLoading ? "Sending..." : `Send Offer Letter (${targetCandidates.length})`}</span>
+                <Send className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -1572,7 +1628,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                  <Send className="w-4 h-4 text-indigo-400 shrink-0" />
                 </button>
 
                 {/* 2nd Mail Option */}
@@ -1597,7 +1653,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                  <Send className="w-4 h-4 text-violet-400 shrink-0" />
                 </button>
 
                 {/* 3rd Mail Option */}
@@ -1619,7 +1675,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                  <Send className="w-4 h-4 text-emerald-400 shrink-0" />
                 </button>
 
                 {/* 4th Mail Option */}
@@ -1641,7 +1697,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                  <Send className="w-4 h-4 text-cyan-400 shrink-0" />
                 </button>
 
                 {/* 5th Mail Option */}
@@ -1663,7 +1719,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 opacity-60 shrink-0" />
+                  <Send className="w-4 h-4 text-amber-400 shrink-0" />
                 </button>
               </div>
             </div>

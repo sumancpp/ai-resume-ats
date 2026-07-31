@@ -1,10 +1,139 @@
 import vm from "vm"
+import { spawnSync } from "child_process"
+import fs from "fs"
+import path from "path"
+import os from "os"
 
 /**
- * Safely runs a JavaScript function against provided test cases.
- * @param {string} code - Candidate's JS solution code (e.g. function solution(arr) { ... })
+ * Safely runs candidate code (JavaScript or Python) against provided test cases.
+ * @param {string} code - Candidate's solution code
  * @param {Array} testCases - [{ input: "...", expectedOutput: "..." }]
+ * @param {string} language - "javascript" | "python" | "cpp" | "java"
  * @returns {Array} - [{ input, expected, actual, passed, error }]
+ */
+export const runCode = (code, testCases = [], language = "javascript") => {
+    const isPython = language?.toLowerCase().includes("python") || language?.toLowerCase() === "py" || /^\s*def\s+/m.test(code)
+
+    if (isPython) {
+        return runPythonCode(code, testCases)
+    }
+
+    return runJsCode(code, testCases)
+}
+
+/**
+ * Executes Python 3 code safely using python3 runner in temporary directory
+ */
+const runPythonCode = (code, testCases = []) => {
+    const results = []
+    const tmpDir = os.tmpdir()
+    const scriptPath = path.join(tmpDir, `temp_sol_${Date.now()}_${Math.random().toString(36).substring(7)}.py`)
+
+    const runnerScript = `
+import sys
+import json
+
+# Candidate Code
+${code}
+
+def run_tests():
+    test_cases = json.loads(sys.argv[1])
+    results = []
+    
+    # Locate solution function
+    target_fn = None
+    if 'solution' in globals() and callable(globals()['solution']):
+        target_fn = globals()['solution']
+    else:
+        for k, v in globals().items():
+            if callable(v) and not k.startswith('_') and k != 'run_tests':
+                target_fn = v
+                break
+
+    for tc in test_cases:
+        raw_input = tc.get('input', '')
+        expected = tc.get('expectedOutput', '')
+        actual = ""
+        passed = False
+        error = None
+        
+        try:
+            # Parse input arguments
+            try:
+                if raw_input.startswith('[') or raw_input.startswith('{') or raw_input.isdigit():
+                    args = [json.loads(raw_input)]
+                else:
+                    args = [json.loads(f'[{raw_input}]')]
+            except Exception:
+                args = [raw_input]
+
+            if target_fn:
+                res = target_fn(*args)
+                actual = json.dumps(res) if isinstance(res, (dict, list)) else str(res)
+                
+                # Normalize comparison
+                norm_actual = str(actual).replace(" ", "").strip('"').strip()
+                norm_expected = str(expected).replace(" ", "").strip('"').strip()
+                passed = (norm_actual == norm_expected)
+            else:
+                actual = "Error: No executable function found (define solution(args))."
+                passed = False
+        except Exception as e:
+            actual = f"Error: {str(e)}"
+            passed = False
+            error = str(e)
+            
+        results.append({
+            "input": raw_input,
+            "expected": expected,
+            "actual": actual,
+            "passed": passed,
+            "error": error
+        })
+        
+    print(json.dumps(results))
+
+if __name__ == "__main__":
+    run_tests()
+`
+
+    try {
+        fs.writeFileSync(scriptPath, runnerScript, "utf8")
+        const pythonProc = spawnSync("python3", [scriptPath, JSON.stringify(testCases)], {
+            timeout: 2000,
+            encoding: "utf8"
+        })
+
+        if (pythonProc.error || pythonProc.status !== 0) {
+            const stderr = pythonProc.stderr || pythonProc.error?.message || "Execution error"
+            return testCases.map(tc => ({
+                input: tc.input,
+                expected: tc.expectedOutput,
+                actual: `Python Error: ${stderr.trim()}`,
+                passed: false,
+                error: stderr
+            }))
+        }
+
+        const parsedOutput = JSON.parse(pythonProc.stdout.trim())
+        return parsedOutput
+    } catch (err) {
+        return testCases.map(tc => ({
+            input: tc.input,
+            expected: tc.expectedOutput,
+            actual: `Execution Error: ${err.message}`,
+            passed: false,
+            error: err.message
+        }))
+    } finally {
+        try {
+            if (fs.existsSync(scriptPath)) fs.unlinkSync(scriptPath)
+        } catch (e) {}
+    }
+}
+
+/**
+ * Safely runs JavaScript code using Node vm sandbox
  */
 export const runJsCode = (code, testCases = []) => {
     const results = []
@@ -15,23 +144,16 @@ export const runJsCode = (code, testCases = []) => {
         let error = null
 
         try {
-            // Prepare a sandbox context
             const sandbox = {
-                console: {
-                    log: (...args) => {
-                        // Suppress or capture console logs
-                    }
-                },
+                console: { log: () => {} },
                 result: null,
                 error: null
             }
 
             const context = vm.createContext(sandbox)
 
-            // Parse input arguments safely
             let parsedInputs = []
             try {
-                // If input looks like JSON array/arguments or primitive, parse it
                 if (testCase.input.startsWith("[") || testCase.input.startsWith("{") || !isNaN(testCase.input)) {
                     parsedInputs = JSON.parse(`[${testCase.input}]`)
                 } else {
@@ -41,12 +163,10 @@ export const runJsCode = (code, testCases = []) => {
                 parsedInputs = [testCase.input]
             }
 
-            // Script runner wrapping candidate code and executing test invocation
             const runnerScript = `
                 ${code}
                 
                 try {
-                    // Locate the last defined function or 'solution' / first function
                     let targetFn = typeof solution === 'function' ? solution : null;
                     if (!targetFn) {
                         const globalKeys = Object.keys(this);
@@ -69,7 +189,6 @@ export const runJsCode = (code, testCases = []) => {
             `
 
             const script = new vm.Script(runnerScript)
-            // Run script with strict 2 second timeout to prevent infinite loops
             script.runInContext(context, { timeout: 2000 })
 
             if (sandbox.error) {
@@ -78,9 +197,8 @@ export const runJsCode = (code, testCases = []) => {
             } else {
                 actual = typeof sandbox.result === "object" ? JSON.stringify(sandbox.result) : String(sandbox.result)
 
-                // Normalize comparison
-                const normActual = String(actual).replace(/\s+/g, "").trim()
-                const normExpected = String(testCase.expectedOutput).replace(/\s+/g, "").trim()
+                const normActual = String(actual).replace(/\s+/g, "").replace(/^"|"$/g, "").trim()
+                const normExpected = String(testCase.expectedOutput).replace(/\s+/g, "").replace(/^"|"$/g, "").trim()
 
                 passed = normActual === normExpected
             }

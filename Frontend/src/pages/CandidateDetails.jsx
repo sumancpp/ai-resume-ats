@@ -286,8 +286,8 @@ const CandidateDetails = () => {
     const newCoding = {
       id: `q_${Date.now()}`,
       type: "coding",
-      questionText: "Write a JavaScript function solution(arr) that returns the sum of all elements.",
-      starterCode: "function solution(arr) {\n  // Write your code here\n  return 0;\n}",
+      questionText: "Problem: Array Element Sum. Given an array of integers arr, return the sum of all elements.",
+      starterCode: "function solution(arr) {\n  // Write your solution here\n  return 0;\n}",
       testCases: [
         { input: "[1, 2, 3, 4]", expectedOutput: "10", description: "Sum positive integers" },
         { input: "[-5, 5]", expectedOutput: "0", description: "Sum negative and positive" }
@@ -510,7 +510,19 @@ const CandidateDetails = () => {
             <span>Back to Candidate List</span>
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href={`https://meet.jit.si/TalentAI-Interview-${resume._id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition-all cursor-pointer shadow-lg"
+              title="HR Direct Join Live Jitsi Interview Room"
+            >
+              <Video className="w-4 h-4 text-cyan-400" />
+              <span>Join Jitsi Interview</span>
+              <ExternalLink className="w-3 h-3 opacity-70" />
+            </a>
+
             <button
               onClick={handleDeleteResume}
               disabled={deletingResume}
@@ -586,6 +598,70 @@ const CandidateDetails = () => {
                 </div>
               </div>
 
+              {/* TECHNICAL ASSESSMENT STATUS & EXAM SCORE CARD */}
+              <div className="bg-[#0F1012] border border-[#272930] rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-mono font-semibold uppercase text-zinc-300">Technical Assessment Status</span>
+                  </div>
+                  
+                  {/* Exam Status Badge */}
+                  {resume.examStatus === "completed" ? (
+                    <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full font-mono text-[10px] font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      <span>COMPLETED</span>
+                    </span>
+                  ) : resume.examStatus === "in_progress" ? (
+                    <span className="px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-full font-mono text-[10px] font-bold flex items-center gap-1 animate-pulse">
+                      <Clock className="w-3 h-3 text-cyan-400" />
+                      <span>IN PROGRESS</span>
+                    </span>
+                  ) : resume.examStatus === "invited" ? (
+                    <span className="px-3 py-1 bg-violet-500/20 text-violet-300 border border-violet-500/30 rounded-full font-mono text-[10px] font-bold flex items-center gap-1">
+                      <Mail className="w-3 h-3 text-violet-400" />
+                      <span>EXAM INVITED</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-full font-mono text-[10px] font-bold">
+                      NOT INVITED YET
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1 border-t border-[#272930]">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">Exam Score:</span>
+                    <div className="text-xl font-bold font-mono text-emerald-400">
+                      {resume.examScore !== null && resume.examScore !== undefined ? (
+                        `${resume.examScore}%`
+                      ) : (
+                        <span className="text-zinc-500 text-xs font-normal">Pending Evaluation</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-0.5 text-right">
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">Hiring Pipeline Stage:</span>
+                    <div className="text-xs font-semibold text-violet-300 capitalize">
+                      {resume.hiringStatus ? resume.hiringStatus.replace(/_/g, " ") : (resume.isShortlisted ? "Shortlisted" : "Indexed")}
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI Evaluation Notes if available */}
+                {examData?.aiFeedback && (
+                  <div className="bg-[#16171B] border border-[#272930] rounded-xl p-3 text-[11px] text-zinc-300 space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-emerald-400 font-semibold block">
+                      AI Evaluation Summary:
+                    </span>
+                    <p className="leading-relaxed text-zinc-300 italic">
+                      "{examData.aiFeedback}"
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* 5 STAGE RECRUITER MAIL BUTTONS */}
               <div className="space-y-3 pt-2 border-t border-[#272930]">
                 <div className="flex items-center justify-between text-xs font-mono uppercase text-violet-400 font-semibold">
@@ -604,7 +680,9 @@ const CandidateDetails = () => {
                       <UserCheck className="w-4 h-4 text-indigo-400" />
                       <span>1. Shortlist Notice Email</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    <div className="flex items-center gap-1 text-indigo-400">
+                      <Send className="w-3.5 h-3.5" />
+                    </div>
                   </button>
 
                   {/* Button 2: Custom & AI Exam Configurator */}
@@ -616,7 +694,9 @@ const CandidateDetails = () => {
                       <Sliders className="w-4 h-4 text-violet-400" />
                       <span>2. Custom AI Exam Configurator</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    <div className="flex items-center gap-1 text-violet-400">
+                      <Send className="w-3.5 h-3.5" />
+                    </div>
                   </button>
 
                   {/* Button 3: Pass Round 1 & Schedule Interview */}
@@ -628,7 +708,9 @@ const CandidateDetails = () => {
                       <FileCheck className="w-4 h-4 text-emerald-400" />
                       <span>3. Pass Round 1 & Jitsi Schedule</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    <div className="flex items-center gap-1 text-emerald-400">
+                      <Send className="w-3.5 h-3.5" />
+                    </div>
                   </button>
 
                   {/* Button 4: Direct Video Interview Link */}
@@ -640,7 +722,9 @@ const CandidateDetails = () => {
                       <Video className="w-4 h-4 text-cyan-400" />
                       <span>4. Direct Video Interview Link Email</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    <div className="flex items-center gap-1 text-cyan-400">
+                      <Send className="w-3.5 h-3.5" />
+                    </div>
                   </button>
 
                   {/* Button 5: Final Offer Letter */}
@@ -652,7 +736,9 @@ const CandidateDetails = () => {
                       <Award className="w-4 h-4 text-amber-400" />
                       <span>5. Send Official Offer Letter Email</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    <div className="flex items-center gap-1 text-amber-400">
+                      <Send className="w-3.5 h-3.5" />
+                    </div>
                   </button>
 
                 </div>
@@ -890,8 +976,8 @@ const CandidateDetails = () => {
                 disabled={actionLoading || !shortlistForm.scheduledDate}
                 className="px-6 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
                 <span>{actionLoading ? "Sending..." : "Send Shortlist Email"}</span>
+                <Send className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -1102,8 +1188,8 @@ const CandidateDetails = () => {
                   disabled={actionLoading || examQuestions.length === 0}
                   className="px-6 py-2.5 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
-                  <Send className="w-3.5 h-3.5" />
                   <span>{actionLoading ? "Sending Invites..." : "Send Configured Exam"}</span>
+                  <Send className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -1189,8 +1275,8 @@ const CandidateDetails = () => {
                 disabled={actionLoading || !round1Form.scheduledDate}
                 className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
                 <span>{actionLoading ? "Sending..." : "Send Round 1 Passed Email"}</span>
+                <Send className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -1264,8 +1350,8 @@ const CandidateDetails = () => {
                 disabled={actionLoading || !interviewForm.scheduledDate}
                 className="px-6 py-2.5 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
                 <span>{actionLoading ? "Sending..." : "Send Video Join Link"}</span>
+                <Send className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -1352,8 +1438,8 @@ const CandidateDetails = () => {
                 disabled={actionLoading || !offerForm.roleCategory || !offerForm.joiningDate}
                 className="px-6 py-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
                 <span>{actionLoading ? "Sending..." : "Send Offer Letter Email"}</span>
+                <Send className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
