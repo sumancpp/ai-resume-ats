@@ -662,6 +662,32 @@ const CandidateDetails = () => {
                 )}
               </div>
 
+              {/* DIRECT HR JITSI INTERVIEW PORTAL */}
+              <div className="bg-[#0F1012] border border-cyan-500/30 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Video className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-mono font-semibold uppercase text-cyan-300">Live Video Interview Room</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-cyan-400/70 border border-cyan-500/20 px-2 py-0.5 rounded-full">Jitsi Meet</span>
+                </div>
+                
+                <p className="text-[11px] text-zinc-400 leading-normal">
+                  Directly join candidate <strong>{resume.name || "Candidate"}</strong>'s live video interview room without waiting for email dispatches.
+                </p>
+
+                <a
+                  href={`https://meet.jit.si/TalentAI-Interview-${resume._id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-lg border border-cyan-400/30 mt-2"
+                >
+                  <Video className="w-4 h-4 text-white" />
+                  <span>Join HR Jitsi Video Interview Room</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                </a>
+              </div>
+
               {/* 5 STAGE RECRUITER MAIL BUTTONS */}
               <div className="space-y-3 pt-2 border-t border-[#272930]">
                 <div className="flex items-center justify-between text-xs font-mono uppercase text-violet-400 font-semibold">
