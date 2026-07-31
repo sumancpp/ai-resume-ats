@@ -38,7 +38,8 @@ import {
   Code2,
   HelpCircle,
   Briefcase,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
@@ -919,6 +920,7 @@ const Dashboard = () => {
                             >
                               <Video className="w-3.5 h-3.5 text-cyan-400" />
                               <span>Join Jitsi</span>
+                              <ExternalLink className="w-3 h-3 opacity-70" />
                             </a>
 
                             <button
