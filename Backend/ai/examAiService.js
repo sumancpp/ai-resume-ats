@@ -3,66 +3,52 @@ import { getGeminiModel } from "./gemini.js"
 /**
  * Generates personalized exam questions (MCQs & Coding challenges) using Gemini AI.
  */
-export const generateExamQuestions = async (resumeText = "", skills = [], roleCategory = "Software Engineering") => {
+export const generateExamQuestions = async (
+    resumeText = "",
+    skills = [],
+    roleCategory = "Software Engineering",
+    mcqCount = 3,
+    codingCount = 2
+) => {
     const geminiModel = getGeminiModel()
+    const targetMcqCount = Math.max(0, Number(mcqCount) || 0)
+    const targetCodingCount = Math.max(0, Number(codingCount) || 0)
+    const totalCount = targetMcqCount + targetCodingCount
 
     const prompt = `
 You are an expert technical recruiter and interviewer.
-Generate a tailored 5-question technical exam for a candidate applying for a ${roleCategory} role.
+Generate a tailored ${totalCount}-question technical exam for a candidate applying for a ${roleCategory} role.
 Candidate Skills: ${skills.join(", ") || "General Programming, Software Engineering"}
 
 Resume Details Snippet:
 ${resumeText.substring(0, 1000)}
 
 Requirements:
-- Question 1, 2, 3 MUST be Multiple Choice Questions (MCQs) testing core concepts in their skills (${skills.slice(0, 3).join(", ") || "Programming"}).
-- Question 4 & 5 MUST be Coding Challenges where candidate writes a JavaScript function.
-- Provide 2 test cases for each coding challenge (input string, expectedOutput string, description).
+- Exactly ${targetMcqCount} questions MUST be Multiple Choice Questions (type: "mcq") testing core concepts in their skills (${skills.slice(0, 4).join(", ") || "Programming"}).
+- Exactly ${targetCodingCount} questions MUST be Coding Challenges (type: "coding") where the candidate writes a JavaScript function.
+- For each coding challenge, provide 2 test cases (input string, expectedOutput string, description).
 
 RETURN ONLY VALID JSON matching this EXACT structure (NO Markdown, NO html, NO extra text):
 {
   "questions": [
-    {
-      "id": "q1",
+    ${Array.from({ length: targetMcqCount }, (_, i) => `{
+      "id": "q${i + 1}",
       "type": "mcq",
       "questionText": "Question text here...",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctOptionIndex": 0
-    },
-    {
-      "id": "q2",
-      "type": "mcq",
-      "questionText": "Question text here...",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctOptionIndex": 1
-    },
-    {
-      "id": "q3",
-      "type": "mcq",
-      "questionText": "Question text here...",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctOptionIndex": 2
-    },
-    {
-      "id": "q4",
+    }`).join(",\n    ")}
+    ${targetMcqCount > 0 && targetCodingCount > 0 ? "," : ""}
+    ${Array.from({ length: targetCodingCount }, (_, i) => `{
+      "id": "q${targetMcqCount + i + 1}",
       "type": "coding",
       "questionText": "Write a function solution(str) that...",
       "starterCode": "function solution(str) {\\n  // Write your code here\\n  return str;\\n}",
       "testCases": [
-        { "input": "\\"hello\\"", "expectedOutput": "\\"olleh\\"", "description": "Reverses string" },
-        { "input": "\\"world\\"", "expectedOutput": "\\"dlrow\\"", "description": "Reverses word" }
+        { "input": "\\"hello\\"", "expectedOutput": "\\"olleh\\"", "description": "Test case 1" },
+        { "input": "\\"world\\"", "expectedOutput": "\\"dlrow\\"", "description": "Test case 2" }
       ]
-    },
-    {
-      "id": "q5",
-      "type": "coding",
-      "questionText": "Write a function solution(arr) that...",
-      "starterCode": "function solution(arr) {\\n  // Write your code here\\n  return [];\\n}",
-      "testCases": [
-        { "input": "[1, 2, 3, 2, 1]", "expectedOutput": "[1, 2, 3]", "description": "Removes duplicates" },
-        { "input": "[5, 5, 5]", "expectedOutput": "[5]", "description": "Removes duplicates" }
-      ]
-    }
+    }`).join(",\n    ")}
   ]
 }
 `

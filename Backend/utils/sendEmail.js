@@ -287,6 +287,159 @@ export const sendVideoInterviewInviteEmail = async ({ to, candidateName = "Candi
     return await sendEmail({ to, subject, html, text })
 }
 
+export const sendShortlistNoticeEmail = async ({ to, candidateName = "Candidate", scheduledDate, scheduledTime, customNotes = "" }) => {
+    const subject = "✨ Good News! Your Resume Has Been Shortlisted - Online Assessment Schedule"
+    const dateDisplay = scheduledDate || "To be confirmed"
+    const timeDisplay = scheduledTime || "To be confirmed"
+
+    const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0f172a; border-radius: 12px; padding: 32px; color: #f8fafc; border: 1px solid #334155;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #818cf8; margin: 0; font-size: 28px; font-weight: 800;">TalentAI Recruitment</h1>
+            <p style="color: #94a3b8; font-size: 14px; margin-top: 4px;">Candidate Shortlist Notification</p>
+        </div>
+
+        <p style="font-size: 16px; color: #e2e8f0; line-height: 1.6;">Dear <strong>${candidateName}</strong>,</p>
+
+        <p style="font-size: 16px; color: #e2e8f0; line-height: 1.6;">We are excited to share that <strong>your CV / Resume has been shortlisted</strong> for our technical evaluation process!</p>
+
+        <div style="background-color: #1e293b; border-left: 4px solid #818cf8; border-radius: 8px; padding: 20px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #a5b4fc; font-size: 16px;">📝 Scheduled Online Assessment Details:</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #e2e8f0; margin-top: 10px;">
+                <tr>
+                    <td style="padding: 6px 0; color: #94a3b8; width: 40%;"><strong>Assessment Date:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #38bdf8;">${dateDisplay}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #94a3b8;"><strong>Assessment Time:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #38bdf8;">${timeDisplay}</td>
+                </tr>
+            </table>
+            ${customNotes ? `<div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #334155; color: #cbd5e1; font-size: 13px;"><strong>HR Message:</strong> ${customNotes}</div>` : ''}
+        </div>
+
+        <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6;">You will receive your unique online assessment link and instructions on the scheduled assessment day. Please ensure you are available.</p>
+
+        <hr style="border: 0; border-top: 1px solid #334155; margin: 32px 0 16px 0;">
+        <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">© TalentAI ATS Recruitment Platform. All rights reserved.</p>
+    </div>
+    `
+
+    const text = `Dear ${candidateName},\n\nYour CV has been shortlisted! We will conduct an online assessment on:\nDate: ${dateDisplay}\nTime: ${timeDisplay}\n\n${customNotes ? "HR Note: " + customNotes + "\n\n" : ""}Best regards,\nTalentAI Team`
+
+    return await sendEmail({ to, subject, html, text })
+}
+
+export const sendRound1PassedEmail = async ({ to, candidateName = "Candidate", examScore, scheduledDate, scheduledTime, meetLink }) => {
+    const subject = "🎉 Congratulations! You Passed Technical Round 1 - Interview Invitation"
+    const dateDisplay = scheduledDate || "Confirmed Date"
+    const timeDisplay = scheduledTime || "Confirmed Time"
+    const jitsiUrl = meetLink || `https://meet.jit.si/TalentAI-Interview-${Math.random().toString(36).substring(7)}`
+
+    const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0f172a; border-radius: 12px; padding: 32px; color: #f8fafc; border: 1px solid #334155;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #34d399; margin: 0; font-size: 28px; font-weight: 800;">TalentAI Recruitment</h1>
+            <p style="color: #94a3b8; font-size: 14px; margin-top: 4px;">Technical Round 1 Results & Interview Invitation</p>
+        </div>
+
+        <p style="font-size: 16px; color: #e2e8f0; line-height: 1.6;">Dear <strong>${candidateName}</strong>,</p>
+
+        <div style="background-color: #064e3b; border-left: 4px solid #10b981; border-radius: 8px; padding: 18px; margin: 20px 0;">
+            <p style="margin: 0; color: #ecfdf5; font-size: 16px; font-weight: 700;">
+                🎉 Congratulations! You have successfully passed Technical Round 1 ${examScore ? `(Score: ${examScore}%)` : ""}!
+            </p>
+            <p style="margin: 6px 0 0 0; color: #a7f3d0; font-size: 14px; line-height: 1.5;">
+                We are pleased to invite you for your next technical interview round with our hiring panel.
+            </p>
+        </div>
+
+        <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #38bdf8; font-size: 16px;">📅 Technical Interview Schedule:</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #e2e8f0; margin-top: 10px;">
+                <tr>
+                    <td style="padding: 6px 0; color: #94a3b8; width: 40%;"><strong>Date:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #38bdf8;">${dateDisplay}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #94a3b8;"><strong>Time:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #38bdf8;">${timeDisplay}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #94a3b8;"><strong>Platform:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #34d399;">Jitsi Meet Video Portal</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="background-color: #1e1b4b; border-left: 4px solid #6366f1; border-radius: 6px; padding: 16px; margin: 20px 0;">
+            <h4 style="margin: 0; color: #a5b4fc; font-size: 14px;">💻 Important Requirements:</h4>
+            <p style="margin: 6px 0 0 0; color: #c7d2fe; font-size: 13px; line-height: 1.6;">
+                Please ensure you download or sign up on <strong>Jitsi Meet</strong> before the interview time. Make sure your video camera and microphone are properly configured.
+            </p>
+        </div>
+
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${jitsiUrl}" target="_blank" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);">
+                🎥 Join Jitsi Video Room
+            </a>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #334155; margin: 32px 0 16px 0;">
+        <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">© TalentAI ATS Recruitment Platform. All rights reserved.</p>
+    </div>
+    `
+
+    const text = `Dear ${candidateName},\n\nCongratulations! You have successfully passed Technical Round 1!\n\nYour Interview is scheduled for:\nDate: ${dateDisplay}\nTime: ${timeDisplay}\nPlatform: Jitsi Meet\nJoin Link: ${jitsiUrl}\n\nBest regards,\nTalentAI Team`
+
+    return await sendEmail({ to, subject, html, text })
+}
+
+export const sendOfferLetterEmail = async ({ to, candidateName = "Candidate", roleCategory = "Software Engineer", ctc = "As per discussion", joiningDate = "Immediate", hrMessage = "" }) => {
+    const subject = `🏆 Official Job Offer Letter - ${roleCategory} | TalentAI`
+
+    const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #064e3b; border-radius: 12px; padding: 32px; color: #f8fafc; border: 1px solid #059669;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #34d399; margin: 0; font-size: 32px; font-weight: 800;">Job Offer Letter</h1>
+            <p style="color: #a7f3d0; font-size: 16px; margin-top: 4px;">TalentAI Selection Announcement</p>
+        </div>
+
+        <p style="font-size: 16px; color: #ecfdf5; line-height: 1.6;">Dear <strong>${candidateName}</strong>,</p>
+
+        <p style="font-size: 16px; color: #ecfdf5; line-height: 1.6;">Following your stellar performance across all assessment and interview rounds, we are delighted to offer you the position of <strong>${roleCategory}</strong>!</p>
+
+        <div style="background-color: #022c22; border-left: 4px solid #10b981; border-radius: 8px; padding: 20px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #6ee7b7; font-size: 16px;">💼 Offer Summary:</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #ecfdf5; margin-top: 10px;">
+                <tr>
+                    <td style="padding: 6px 0; color: #a7f3d0; width: 40%;"><strong>Designation:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #ffffff;">${roleCategory}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #a7f3d0;"><strong>Compensation (CTC):</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #34d399;">${ctc}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #a7f3d0;"><strong>Joining Date:</strong></td>
+                    <td style="padding: 6px 0; font-weight: 700; color: #38bdf8;">${joiningDate}</td>
+                </tr>
+            </table>
+            ${hrMessage ? `<div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #047857; color: #a7f3d0; font-size: 13px;"><strong>Message from HR:</strong> ${hrMessage}</div>` : ''}
+        </div>
+
+        <p style="font-size: 15px; color: #ecfdf5; line-height: 1.6;">Our HR operations team will follow up with the formal agreement documents for your signature. Welcome onboard!</p>
+
+        <hr style="border: 0; border-top: 1px solid #047857; margin: 32px 0 16px 0;">
+        <p style="font-size: 12px; color: #6ee7b7; text-align: center; margin: 0;">© TalentAI ATS Recruitment Platform. All rights reserved.</p>
+    </div>
+    `
+
+    const text = `Dear ${candidateName},\n\nCongratulations! We are delighted to offer you the position of ${roleCategory}!\n\nCompensation (CTC): ${ctc}\nJoining Date: ${joiningDate}\n\n${hrMessage ? "HR Note: " + hrMessage + "\n\n" : ""}Welcome to the team!\nTalentAI HR Team`
+
+    return await sendEmail({ to, subject, html, text })
+}
+
 export default sendEmail
 
 

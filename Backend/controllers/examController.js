@@ -3,7 +3,14 @@ import Exam from "../models/Exam.js"
 import Resume from "../models/Resume.js"
 import { generateExamQuestions, evaluateExamSubmission } from "../ai/examAiService.js"
 import { runJsCode } from "../helpers/codeRunner.js"
-import { sendExamInviteEmail, sendHiringConfirmationEmail, sendVideoInterviewInviteEmail } from "../utils/sendEmail.js"
+import {
+    sendExamInviteEmail,
+    sendHiringConfirmationEmail,
+    sendVideoInterviewInviteEmail,
+    sendShortlistNoticeEmail,
+    sendRound1PassedEmail,
+    sendOfferLetterEmail
+} from "../utils/sendEmail.js"
 
 /**
  * Toggle CV Shortlist status for a candidate
@@ -608,6 +615,248 @@ export const notifyCandidateJoinedMeet = async (req, res) => {
     } catch (error) {
         console.error("Candidate joined meet error:", error)
         res.status(500).json({ success: false, message: "Error verifying candidate email for Google Meet" })
+    }
+}
+
+/**
+ * Generate Custom AI Questions based on HR specs (mcqCount, codingCount, roleCategory)
+ */
+export const generateCustomQuestions = async (req, res) => {
+    try {
+        const { resumeId, mcqCount = 3, codingCount = 2, roleCategory } = req.body
+
+        let resumeText = ""
+        let skills = []
+        let category = roleCategory || "Software Engineering"
+
+        if (resumeId) {
+            const resume = await Resume.findOne({ _id: resumeId, user: req.user._id })
+            if (resume) {
+                resumeText = resume.resumeText || ""
+                skills = resume.skills || []
+                category = roleCategory || resume.roleCategory || "Software Engineering"
+            }
+        }
+
+        const questions = await generateExamQuestions(
+            resumeText,
+            skills,
+            category,
+            mcqCount,
+            codingCount
+        )
+
+        res.json({
+            success: true,
+            questions
+        })
+    } catch (error) {
+        console.error("Generate custom questions error:", error)
+        res.status(500).json({ success: false, message: "Error generating custom questions" })
+    }
+}
+
+/**
+ * Send Configured Exam (custom duration, customized/edited questions, link expiry)
+ */
+export const sendConfiguredExam = async (req, res) => {
+    try {
+        const {
+            resumeIds = [],
+            questions = [],
+            durationMinutes = 10,
+            linkExpiryHours = 24,
+            candidateEmailOverrides = {}
+        } = req.body
+
+        if (!Array.isArray(resumeIds) || resumeIds.length === 0) {
+            return res.status(400).json({ success: false, message: "At least one candidate must be selected" })
+        }
+
+        const resumes = await Resume.find({ _id: { $in: resumeIds }, user: req.user._id })
+        if (resumes.length === 0) {
+            return res.status(404).json({ success: false, message: "No valid candidates found" })
+        }
+
+        const host = req.get("origin") || req.get("referer") || "http://localhost:5173"
+        const cleanHost = host.replace(/\/$/, "")
+        let sentCount = 0
+
+        for (const resume of resumes) {
+            const emailToSend = candidateEmailOverrides[resume._id] || resume.email || `${resume.name.toLowerCase().replace(/\s+/g, ".")}@example.com`
+            resume.email = emailToSend
+            resume.isShortlisted = true
+
+            const token = crypto.randomBytes(24).toString("hex")
+            const expiresAt = new Date(Date.now() + (Number(linkExpiryHours) || 24) * 60 * 60 * 1000)
+
+            const exam = await Exam.create({
+                resume: resume._id,
+                user: req.user._id,
+                candidateEmail: emailToSend,
+                candidateName: resume.name || "Candidate",
+                token,
+                expiresAt,
+                questions: questions,
+                timer: {
+                    totalMinutes: Number(durationMinutes) || 10
+                },
+                status: "pending"
+            })
+
+            resume.latestExam = exam._id
+            resume.examStatus = "invited"
+            resume.hiringStatus = "exam_invited"
+            await resume.save()
+
+            const examLink = `${cleanHost}/exam/${token}`
+            await sendExamInviteEmail({
+                to: emailToSend,
+                candidateName: resume.name || "Candidate",
+                examLink,
+                expiresAt
+            })
+
+            sentCount++
+        }
+
+        res.json({
+            success: true,
+            sentCount,
+            message: `Successfully sent configured technical exam to ${sentCount} candidate(s)!`
+        })
+    } catch (error) {
+        console.error("Send configured exam error:", error)
+        res.status(500).json({ success: false, message: "Error sending configured exam emails" })
+    }
+}
+
+/**
+ * Send Shortlist & Scheduled Assessment Notice Email
+ */
+export const sendShortlistNotice = async (req, res) => {
+    try {
+        const { resumeIds = [], scheduledDate, scheduledTime, customNotes } = req.body
+
+        if (!Array.isArray(resumeIds) || resumeIds.length === 0) {
+            return res.status(400).json({ success: false, message: "At least one candidate must be selected" })
+        }
+
+        const resumes = await Resume.find({ _id: { $in: resumeIds }, user: req.user._id })
+        let sentCount = 0
+
+        for (const resume of resumes) {
+            const emailToSend = resume.email || `${resume.name.toLowerCase().replace(/\s+/g, ".")}@example.com`
+
+            resume.isShortlisted = true
+            resume.hiringStatus = "shortlisted"
+            await resume.save()
+
+            await sendShortlistNoticeEmail({
+                to: emailToSend,
+                candidateName: resume.name || "Candidate",
+                scheduledDate,
+                scheduledTime,
+                customNotes
+            })
+            sentCount++
+        }
+
+        res.json({
+            success: true,
+            sentCount,
+            message: `Shortlist & assessment schedule email sent to ${sentCount} candidate(s)!`
+        })
+    } catch (error) {
+        console.error("Send shortlist notice error:", error)
+        res.status(500).json({ success: false, message: "Error sending shortlist emails" })
+    }
+}
+
+/**
+ * Send Technical Round 1 Passed & Interview Schedule Email
+ */
+export const sendRound1Passed = async (req, res) => {
+    try {
+        const { resumeIds = [], scheduledDate, scheduledTime, customMeetUrl } = req.body
+
+        if (!Array.isArray(resumeIds) || resumeIds.length === 0) {
+            return res.status(400).json({ success: false, message: "At least one candidate must be selected" })
+        }
+
+        const resumes = await Resume.find({ _id: { $in: resumeIds }, user: req.user._id })
+        let sentCount = 0
+
+        for (const resume of resumes) {
+            const emailToSend = resume.email || `${resume.name.toLowerCase().replace(/\s+/g, ".")}@example.com`
+
+            resume.hiringStatus = "interview_scheduled"
+            await resume.save()
+
+            const interviewToken = crypto.randomBytes(24).toString("hex")
+            const meetLink = customMeetUrl?.trim() || `https://meet.jit.si/TalentAI-Interview-${interviewToken.slice(0, 12)}`
+
+            await sendRound1PassedEmail({
+                to: emailToSend,
+                candidateName: resume.name || "Candidate",
+                examScore: resume.examScore,
+                scheduledDate,
+                scheduledTime,
+                meetLink
+            })
+            sentCount++
+        }
+
+        res.json({
+            success: true,
+            sentCount,
+            message: `Technical Round 1 Passed & Jitsi interview schedule email sent to ${sentCount} candidate(s)!`
+        })
+    } catch (error) {
+        console.error("Send Round 1 passed email error:", error)
+        res.status(500).json({ success: false, message: "Error sending Round 1 passed emails" })
+    }
+}
+
+/**
+ * Send Official Offer Letter Email
+ */
+export const sendOfferLetter = async (req, res) => {
+    try {
+        const { resumeIds = [], roleCategory, ctc, joiningDate, hrMessage } = req.body
+
+        if (!Array.isArray(resumeIds) || resumeIds.length === 0) {
+            return res.status(400).json({ success: false, message: "At least one candidate must be selected" })
+        }
+
+        const resumes = await Resume.find({ _id: { $in: resumeIds }, user: req.user._id })
+        let sentCount = 0
+
+        for (const resume of resumes) {
+            const emailToSend = resume.email || `${resume.name.toLowerCase().replace(/\s+/g, ".")}@example.com`
+
+            resume.hiringStatus = "hired"
+            await resume.save()
+
+            await sendOfferLetterEmail({
+                to: emailToSend,
+                candidateName: resume.name || "Candidate",
+                roleCategory: roleCategory || resume.roleCategory || "Software Engineer",
+                ctc,
+                joiningDate,
+                hrMessage
+            })
+            sentCount++
+        }
+
+        res.json({
+            success: true,
+            sentCount,
+            message: `Official Offer Letter email successfully sent to ${sentCount} candidate(s)!`
+        })
+    } catch (error) {
+        console.error("Send offer letter error:", error)
+        res.status(500).json({ success: false, message: "Error sending offer letter emails" })
     }
 }
 
