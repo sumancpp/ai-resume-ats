@@ -212,7 +212,7 @@ export const sendHiringConfirmationEmail = async ({ to, candidateName = "Candida
 }
 
 export const sendVideoInterviewInviteEmail = async ({ to, candidateName = "Candidate", interviewLink, meetLink, expiresAt, scheduledDate, scheduledTime, isResend = false }) => {
-    const finalMeetUrl = meetLink || interviewLink
+    const finalMeetUrl = (meetLink && meetLink.trim()) ? meetLink.trim() : (interviewLink || "https://meet.jit.si")
     const subject = isResend 
         ? "📹 Updated Meeting Schedule: Live Technical Interview & Evaluation - TalentAI"
         : "🎉 Congratulations! Technical Assessment Passed & Live Interview Schedule - TalentAI"
@@ -261,19 +261,20 @@ export const sendVideoInterviewInviteEmail = async ({ to, candidateName = "Candi
             <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #c7d2fe; font-size: 13px; line-height: 1.7;">
                 <li>Please test your camera & microphone prior to the meeting.</li>
                 <li>Ensure you join using your registered candidate email address: <strong style="color: #60a5fa;">${to}</strong>.</li>
-                <li>Click the join button below at your scheduled time.</li>
+                <li>Click the join button or direct link below at your scheduled time to connect with HR.</li>
             </ul>
         </div>
 
-        <div style="text-align: center; margin: 32px 0;">
+        <div style="text-align: center; margin: 28px 0 16px 0;">
             <a href="${finalMeetUrl}" target="_blank" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);">
                 🎥 Join Jitsi Video Call Room
             </a>
         </div>
 
-        <div style="text-align: center; margin-top: 16px;">
-            <a href="${interviewLink}" target="_blank" style="color: #818cf8; text-decoration: underline; font-size: 13px;">
-                Alternative TalentAI Candidate Portal Link
+        <div style="background-color: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; text-align: center; margin-bottom: 24px;">
+            <p style="font-size: 11px; color: #94a3b8; margin: 0 0 4px 0; font-weight: 600;">DIRECT JITSI INTERVIEW URL (Click or Copy into Browser):</p>
+            <a href="${finalMeetUrl}" target="_blank" style="color: #38bdf8; font-weight: 700; word-break: break-all; text-decoration: underline; font-size: 14px;">
+                ${finalMeetUrl}
             </a>
         </div>
 
@@ -282,7 +283,7 @@ export const sendVideoInterviewInviteEmail = async ({ to, candidateName = "Candi
     </div>
     `
 
-    const text = `Dear ${candidateName},\n\nCongratulations! You passed your Technical Assessment!\n\nYour Live Interview is scheduled for:\nDate: ${dateDisplay}\nTime: ${timeDisplay}\n\nJoin Link: ${finalMeetUrl}\n\nBest regards,\nTalentAI Team`
+    const text = `Dear ${candidateName},\n\nCongratulations! You passed your Technical Assessment!\n\nYour Live Interview is scheduled for:\nDate: ${dateDisplay}\nTime: ${timeDisplay}\n\nJitsi Room Join Link: ${finalMeetUrl}\n\nBest regards,\nTalentAI Team`
 
     return await sendEmail({ to, subject, html, text })
 }
