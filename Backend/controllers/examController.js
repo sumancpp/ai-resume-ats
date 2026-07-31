@@ -502,7 +502,7 @@ export const sendVideoInterviewInvite = async (req, res) => {
 
         const interviewToken = crypto.randomBytes(24).toString("hex")
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days validity for scheduled meeting
-        const meetLink = customMeetUrl?.trim() || generateInstantMeetLink(interviewToken)
+        const meetLink = customMeetUrl?.trim() || `https://meet.jit.si/TalentAI-Interview-${resume._id}`
 
         exam.meetLink = meetLink
         exam.interviewToken = interviewToken
@@ -794,7 +794,7 @@ export const sendRound1Passed = async (req, res) => {
             await resume.save()
 
             const interviewToken = crypto.randomBytes(24).toString("hex")
-            const meetLink = customMeetUrl?.trim() || `https://meet.jit.si/TalentAI-Interview-${interviewToken.slice(0, 12)}`
+            const meetLink = customMeetUrl?.trim() || `https://meet.jit.si/TalentAI-Interview-${resume._id}`
 
             await sendRound1PassedEmail({
                 to: emailToSend,
