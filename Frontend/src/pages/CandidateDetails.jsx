@@ -26,7 +26,10 @@ import {
   Sliders,
   Plus,
   Edit3,
-  Code2
+  Code2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw
 } from "lucide-react"
 
 import InterviewModal from "../components/InterviewModal"
@@ -817,32 +820,88 @@ const CandidateDetails = () => {
             className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col justify-between min-h-[650px]"
           >
             
-            {/* VIEW CONTROLS */}
+            {/* VIEW CONTROLS & TOOLBAR */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#272930] pb-4 mb-4 text-xs text-zinc-400">
               <div className="flex items-center space-x-2">
                 <FileText className="w-4 h-4 text-violet-400" />
-                <span className="font-serif italic font-normal text-white text-base truncate max-w-[240px]">
+                <span className="font-serif italic font-normal text-white text-base truncate max-w-[200px]">
                   {pdfError ? "Parsed Resume Text & Summary" : "Resume Document Preview"}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Page Navigation Controls (for Multi-Page Resumes) */}
+                {viewMode === "canvas" && numPages && numPages > 1 && (
+                  <div className="flex items-center gap-1 bg-[#0F1012] px-2 py-1 rounded-full border border-[#272930] text-[11px] text-zinc-300">
+                    <button
+                      disabled={pageNumber <= 1}
+                      onClick={() => setPageNumber((prev) => Math.max(prev - 1, 1))}
+                      className="p-1 rounded hover:bg-[#272930] disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                      title="Previous Page"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="font-mono text-[10px] px-1">
+                      {pageNumber} / {numPages}
+                    </span>
+                    <button
+                      disabled={pageNumber >= numPages}
+                      onClick={() => setPageNumber((prev) => Math.min(prev + 1, numPages))}
+                      className="p-1 rounded hover:bg-[#272930] disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                      title="Next Page"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Zoom Controls */}
+                {viewMode === "canvas" && pdfUrl && !pdfError && (
+                  <div className="flex items-center gap-1 bg-[#0F1012] px-2 py-1 rounded-full border border-[#272930] text-[11px] text-zinc-300">
+                    <button
+                      onClick={() => setScale((s) => Math.max(s - 0.15, 0.5))}
+                      className="p-1 rounded hover:bg-[#272930] cursor-pointer"
+                      title="Zoom Out"
+                    >
+                      <ZoomOut className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="font-mono text-[10px] w-10 text-center">
+                      {Math.round(scale * 100)}%
+                    </span>
+                    <button
+                      onClick={() => setScale((s) => Math.min(s + 0.15, 2.0))}
+                      className="p-1 rounded hover:bg-[#272930] cursor-pointer"
+                      title="Zoom In"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setScale(1.0)}
+                      className="p-1 rounded hover:bg-[#272930] text-zinc-400 hover:text-white cursor-pointer ml-0.5"
+                      title="Reset Zoom"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
+                {/* View Mode Switcher */}
                 <div className="flex items-center bg-[#0F1012] p-1 rounded-full border border-[#272930] text-[11px]">
                   <button
                     onClick={() => setViewMode("canvas")}
-                    className={`px-3 py-1 rounded-full transition-all cursor-pointer ${viewMode === "canvas" ? "bg-violet-600 text-white font-semibold" : "text-zinc-400 hover:text-white"}`}
+                    className={`px-3 py-1 rounded-full transition-all cursor-pointer ${viewMode === "canvas" ? "bg-violet-600 text-white font-semibold shadow-md" : "text-zinc-400 hover:text-white"}`}
                   >
                     Canvas View
                   </button>
                   <button
                     onClick={() => setViewMode("native")}
-                    className={`px-3 py-1 rounded-full transition-all cursor-pointer ${viewMode === "native" ? "bg-violet-600 text-white font-semibold" : "text-zinc-400 hover:text-white"}`}
+                    className={`px-3 py-1 rounded-full transition-all cursor-pointer ${viewMode === "native" ? "bg-violet-600 text-white font-semibold shadow-md" : "text-zinc-400 hover:text-white"}`}
                   >
                     Embedded
                   </button>
                   <button
                     onClick={() => setViewMode("text")}
-                    className={`px-3 py-1 rounded-full transition-all cursor-pointer ${viewMode === "text" ? "bg-violet-600 text-white font-semibold" : "text-zinc-400 hover:text-white"}`}
+                    className={`px-3 py-1 rounded-full transition-all cursor-pointer ${viewMode === "text" ? "bg-violet-600 text-white font-semibold shadow-md" : "text-zinc-400 hover:text-white"}`}
                   >
                     Parsed Text
                   </button>
@@ -851,7 +910,7 @@ const CandidateDetails = () => {
             </div>
 
             {/* DOCUMENT / FALLBACK TEXT DISPLAY */}
-            <div className="flex-1 flex justify-center items-center bg-[#0F1012] rounded-2xl border border-[#272930] p-4 overflow-auto min-h-[550px] max-h-[750px]">
+            <div className="flex-1 flex justify-center items-start bg-[#0F1012] rounded-2xl border border-[#272930] p-4 sm:p-6 overflow-y-auto overflow-x-auto min-h-[600px] max-h-[800px] w-full">
               {viewMode === "text" || pdfError ? (
                 /* PARSED RESUME TEXT FALLBACK VIEWER (handles 404 missing PDFs gracefully) */
                 <div className="w-full space-y-6 text-left font-sans text-xs text-zinc-300">
@@ -892,30 +951,32 @@ const CandidateDetails = () => {
                 </div>
               ) : pdfUrl ? (
                 viewMode === "canvas" ? (
-                  <Document
-                    file={pdfUrl}
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    onLoadError={onDocumentLoadError}
-                    loading={
-                      <div className="text-xs text-zinc-400 py-12 flex flex-col items-center gap-3">
-                        <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
-                        Rendering Resume Document...
-                      </div>
-                    }
-                  >
-                    <Page
-                      pageNumber={pageNumber}
-                      scale={scale}
-                      renderTextLayer={true}
-                      renderAnnotationLayer={true}
-                      className="shadow-2xl rounded"
-                    />
-                  </Document>
+                  <div className="py-2 flex justify-center w-full">
+                    <Document
+                      file={pdfUrl}
+                      onLoadSuccess={onDocumentLoadSuccess}
+                      onLoadError={onDocumentLoadError}
+                      loading={
+                        <div className="text-xs text-zinc-400 py-16 flex flex-col items-center gap-3">
+                          <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+                          Rendering Resume Document...
+                        </div>
+                      }
+                    >
+                      <Page
+                        pageNumber={pageNumber}
+                        scale={scale}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        className="shadow-2xl rounded-lg overflow-hidden border border-[#272930]"
+                      />
+                    </Document>
+                  </div>
                 ) : (
                   <iframe
                     src={pdfUrl}
                     title="Resume PDF Embedded Preview"
-                    className="w-full h-[650px] rounded-xl border border-[#272930]"
+                    className="w-full h-[700px] rounded-xl border border-[#272930]"
                   />
                 )
               ) : (
