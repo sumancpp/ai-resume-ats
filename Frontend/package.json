@@ -16,6 +16,8 @@
     "axios": "^1.16.1",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^12.43.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.26.0",
     "pdfjs-dist": "^3.11.174",
     "react": "^18.3.1",

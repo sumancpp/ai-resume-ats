@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { Document, Page, pdfjs } from "react-pdf"
 import axios from "axios"
 import { motion, AnimatePresence } from "framer-motion"
+import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
 import {
   ArrowLeft,
   GraduationCap,
@@ -32,7 +34,8 @@ import {
   RotateCcw,
   ShieldAlert,
   AlertTriangle,
-  Camera
+  Camera,
+  Download
 } from "lucide-react"
 
 import InterviewModal from "../components/InterviewModal"
@@ -70,6 +73,49 @@ const CandidateDetails = () => {
   const [examData, setExamData] = useState(null)
   const [selectedSnapshot, setSelectedSnapshot] = useState(null)
   const [isInterviewOpen, setIsInterviewOpen] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const reportRef = useRef(null)
+
+  const handleDownloadPdfReport = async () => {
+    if (!reportRef.current) return
+    setExportingPdf(true)
+    const toastId = toast.loading("Generating Candidate Evaluation PDF Report...")
+    try {
+      const element = reportRef.current
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        backgroundColor: "#0F1012",
+        useCORS: true,
+        logging: false
+      })
+      const imgData = canvas.toDataURL("image/png")
+      const pdf = new jsPDF("p", "mm", "a4")
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      let position = 0
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      const fileName = `${(resume?.name || "Candidate").replace(/\s+/g, "_")}_TalentAI_Report.pdf`
+      pdf.save(fileName)
+      toast.success("PDF Evaluation Report downloaded successfully!", { id: toastId })
+    } catch (err) {
+      console.error("PDF generation error:", err)
+      toast.error("Error generating PDF report: " + err.message, { id: toastId })
+    } finally {
+      setExportingPdf(false)
+    }
+  }
 
   // 5 STAGE ACTION MODAL STATES
   const [activeModal, setActiveModal] = useState(null) // 'shortlist' | 'exam_config' | 'round1_passed' | 'interview' | 'offer'
@@ -521,6 +567,16 @@ const CandidateDetails = () => {
           </button>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleDownloadPdfReport}
+              disabled={exportingPdf}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all cursor-pointer shadow-lg"
+              title="Download Full Candidate Evaluation Report PDF"
+            >
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>{exportingPdf ? "Exporting PDF..." : "Download PDF Dossier"}</span>
+            </button>
+
             <a
               href={`https://meet.jit.si/TalentAI-Interview-${resume._id}`}
               target="_blank"
@@ -556,8 +612,8 @@ const CandidateDetails = () => {
           </div>
         </motion.div>
 
-        {/* MAIN 2-COLUMN DOSSIER GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* MAIN 2-COLUMN DOSSIER GRID FOR PRINT/PDF CAPTURE */}
+        <div ref={reportRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-[#0F1012] p-2 rounded-3xl">
           
           {/* LEFT COLUMN: CANDIDATE SUMMARY & 5 STAGE MAIL ACTIONS */}
           <motion.div
