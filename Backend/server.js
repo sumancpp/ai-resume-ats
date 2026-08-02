@@ -187,6 +187,41 @@ app.get("/resumes/:id", protect, async (req, res) => {
     }
 })
 
+// Stream / Proxy Resume PDF File (bypasses Cloudinary CDN 401 & local disk path issues)
+app.get("/resumes/:id/file", protect, async (req, res) => {
+    try {
+        const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id, isDeleted: { $ne: true } })
+        if (!resume || !resume.filePath) {
+            return res.status(404).json({ success: false, message: "Resume file not found" })
+        }
+
+        // If Cloudinary or Remote HTTP URL, proxy/stream it through server
+        if (resume.filePath.startsWith("http://") || resume.filePath.startsWith("https://")) {
+            const fileRes = await fetch(resume.filePath)
+            if (!fileRes.ok) {
+                console.error("Cloud storage stream error:", fileRes.status, fileRes.statusText)
+                return res.status(fileRes.status).json({ success: false, message: "Error loading file from cloud storage" })
+            }
+            res.setHeader("Content-Type", "application/pdf")
+            res.setHeader("Content-Disposition", "inline; filename=\"resume.pdf\"")
+            const arrayBuffer = await fileRes.arrayBuffer()
+            return res.send(Buffer.from(arrayBuffer))
+        }
+
+        // If local disk file path
+        const absolutePath = path.resolve(resume.filePath)
+        if (!fs.existsSync(absolutePath)) {
+            return res.status(404).json({ success: false, message: "File binary missing from backend disk storage" })
+        }
+
+        res.setHeader("Content-Type", "application/pdf")
+        return res.sendFile(absolutePath)
+    } catch (error) {
+        console.error("Stream resume file error:", error)
+        res.status(500).json({ success: false, message: "Failed to stream resume file" })
+    }
+})
+
 app.delete("/resumes/:id", protect, async (req, res) => {
     try {
         const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id })

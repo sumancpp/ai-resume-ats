@@ -477,13 +477,9 @@ const CandidateDetails = () => {
   }
 
   const backendBase = getBackendUrl()
-  const cleanFilePath = resume.filePath
-    ? resume.filePath.replace(/\\/g, "/").replace(/^\//, "")
-    : null
-  const pdfUrl = cleanFilePath
-    ? (cleanFilePath.startsWith("http://") || cleanFilePath.startsWith("https://")
-        ? cleanFilePath
-        : `${backendBase}/${cleanFilePath}`)
+  const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token") || ""
+  const pdfUrl = resume?._id
+    ? `${backendBase}/resumes/${resume._id}/file?token=${encodeURIComponent(token)}`
     : null
 
   const onDocumentLoadSuccess = ({ numPages }) => {
