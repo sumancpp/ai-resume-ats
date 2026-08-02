@@ -17,6 +17,7 @@ const getTransporter = () => {
 
     cachedTransporter = nodemailer.createTransport({
         service: "gmail",
+        family: 4,
         pool: true,
         maxConnections: 5,
         maxMessages: 100,
@@ -122,6 +123,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
             const emailPass = process.env.EMAIL_PASS.replace(/\s+/g, "")
             const directTransporter = nodemailer.createTransport({
                 service: "gmail",
+                family: 4,
                 auth: { user: emailUser, pass: emailPass }
             })
             await directTransporter.sendMail(mailOptions)
