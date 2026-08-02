@@ -427,7 +427,7 @@ ${text}
                 try {
                     const summaryPromise = geminiModel.generateContent(summaryPrompt)
                     const timeoutPromise = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error("Gemini Timeout")), 2000)
+                        setTimeout(() => reject(new Error("Gemini Timeout")), 7000)
                     )
                     const summaryResult = await Promise.race([summaryPromise, timeoutPromise])
                     summary = summaryResult.response.text().trim()
