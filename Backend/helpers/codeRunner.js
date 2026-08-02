@@ -142,6 +142,7 @@ export const runJsCode = (code, testCases = []) => {
         let actual = ""
         let passed = false
         let error = null
+        const startTime = performance.now()
 
         try {
             const sandbox = {
@@ -208,11 +209,14 @@ export const runJsCode = (code, testCases = []) => {
             error = err.message
         }
 
+        const executionTimeMs = Math.round((performance.now() - startTime) * 100) / 100
+
         results.push({
             input: testCase.input,
             expected: testCase.expectedOutput,
             actual,
             passed,
+            executionTimeMs,
             hidden: testCase.hidden || false,
             error
         })

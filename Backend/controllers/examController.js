@@ -1,8 +1,8 @@
 import crypto from "crypto"
 import Exam from "../models/Exam.js"
 import Resume from "../models/Resume.js"
-import { generateExamQuestions, evaluateExamSubmission } from "../ai/examAiService.js"
-import { runCode } from "../helpers/codeRunner.js"
+import { generateExamQuestions, evaluateExamSubmission, analyzeCodeComplexityAndQuality } from "../ai/examAiService.js"
+import { runCode, runJsCode } from "../helpers/codeRunner.js"
 import {
     sendExamInviteEmail,
     sendHiringConfirmationEmail,
@@ -322,7 +322,7 @@ export const submitExam = async (req, res) => {
 
         exam.answers = answers || {}
         
-        // Evaluate candidate code submissions against test cases
+        // Evaluate candidate code submissions against test cases & perform AI analysis
         const evaluatedCodeSubmissions = []
         if (Array.isArray(codeSubmissions)) {
             for (const sub of codeSubmissions) {
@@ -330,9 +330,24 @@ export const submitExam = async (req, res) => {
                 const testCases = questionObj?.testCases || []
                 const testResults = runJsCode(sub.code || "", testCases)
 
+                // Calculate average execution time in ms
+                const totalExecTime = testResults.reduce((acc, tr) => acc + (tr.executionTimeMs || 0), 0)
+                const avgExecTime = testResults.length > 0 ? Math.round((totalExecTime / testResults.length) * 100) / 100 : 0
+
+                // Perform AI complexity, code quality, and plagiarism analysis
+                const aiAnalysisObj = await analyzeCodeComplexityAndQuality(sub.code || "", questionObj?.questionText || "")
+
                 evaluatedCodeSubmissions.push({
                     questionId: sub.questionId,
+                    language: sub.language || "javascript",
                     code: sub.code,
+                    executionTimeMs: avgExecTime,
+                    timeComplexity: aiAnalysisObj.timeComplexity,
+                    spaceComplexity: aiAnalysisObj.spaceComplexity,
+                    codeQualityScore: aiAnalysisObj.codeQualityScore,
+                    plagiarismFlag: aiAnalysisObj.plagiarismFlag,
+                    plagiarismConfidence: aiAnalysisObj.plagiarismConfidence,
+                    aiAnalysis: aiAnalysisObj.aiAnalysis,
                     testResults
                 })
             }

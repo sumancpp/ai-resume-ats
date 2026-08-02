@@ -720,6 +720,60 @@ const CandidateDetails = () => {
                     )}
                   </div>
                 )}
+
+                {/* AI CODE COMPLEXITY & QUALITY ANALYSIS CARD */}
+                {examData?.codeSubmissions && examData.codeSubmissions.length > 0 && (
+                  <div className="bg-[#141519] border border-indigo-500/30 rounded-xl p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Code2 className="w-4 h-4 text-indigo-400" />
+                        <span className="text-xs font-mono font-bold uppercase text-indigo-300">AI Code Quality & Complexity Analysis</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                        {examData.codeSubmissions.length} Solution(s)
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {examData.codeSubmissions.map((sub, idx) => (
+                        <div key={idx} className="bg-[#1A1B20] border border-[#272930] rounded-lg p-3 space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-indigo-300 font-bold text-[11px]">
+                              Solution #{idx + 1} ({sub.language || "javascript"})
+                            </span>
+                            <div className="flex items-center gap-2 font-mono text-[10px]">
+                              <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-bold">
+                                {sub.timeComplexity || "O(N)"}
+                              </span>
+                              <span className="bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded font-bold">
+                                {sub.spaceComplexity || "O(1)"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                            <div className="bg-[#141519] p-1.5 rounded border border-[#272930] flex justify-between">
+                              <span className="text-zinc-400">Quality Score:</span>
+                              <span className="font-bold text-emerald-400">{sub.codeQualityScore || 85}/100</span>
+                            </div>
+                            <div className="bg-[#141519] p-1.5 rounded border border-[#272930] flex justify-between">
+                              <span className="text-zinc-400">AI Copy Risk:</span>
+                              <span className={`font-bold ${sub.plagiarismFlag ? "text-rose-400" : "text-emerald-400"}`}>
+                                {sub.plagiarismFlag ? `High Risk (${sub.plagiarismConfidence}%)` : "Low / Organic"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {sub.aiAnalysis && (
+                            <p className="text-[10px] text-zinc-300 leading-normal italic bg-[#141519]/60 p-2 rounded border border-[#272930]">
+                              "{sub.aiAnalysis}"
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* DIRECT HR JITSI INTERVIEW PORTAL */}

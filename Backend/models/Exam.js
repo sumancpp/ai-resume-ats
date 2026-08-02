@@ -72,7 +72,15 @@ const examSchema = new mongoose.Schema({
     codeSubmissions: [
         {
             questionId: { type: String },
+            language: { type: String, default: "javascript" },
             code: { type: String },
+            executionTimeMs: { type: Number, default: 0 },
+            timeComplexity: { type: String, default: "O(N)" },
+            spaceComplexity: { type: String, default: "O(1)" },
+            codeQualityScore: { type: Number, default: 85 },
+            plagiarismFlag: { type: Boolean, default: false },
+            plagiarismConfidence: { type: Number, default: 0 },
+            aiAnalysis: { type: String, default: "" },
             testResults: [
                 {
                     input: String,

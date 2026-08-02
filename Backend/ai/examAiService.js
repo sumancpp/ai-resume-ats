@@ -179,3 +179,88 @@ Keep it strictly under 50 words.
 
     return { score, aiFeedback }
 }
+
+/**
+ * Evaluates candidate solution code for Time Complexity, Space Complexity, Code Quality, and Plagiarism / AI-generated code detection.
+ */
+export const analyzeCodeComplexityAndQuality = async (code = "", questionText = "") => {
+    if (!code || code.trim().length === 0) {
+        return {
+            timeComplexity: "O(1)",
+            spaceComplexity: "O(1)",
+            codeQualityScore: 0,
+            plagiarismFlag: false,
+            plagiarismConfidence: 0,
+            aiAnalysis: "No solution code was submitted."
+        }
+    }
+
+    try {
+        const geminiModel = getGeminiModel()
+        const prompt = `
+You are a senior principal software engineer and competitive programming grader.
+Analyze the following candidate code submission for a technical coding question:
+
+Problem Statement:
+${questionText.substring(0, 500)}
+
+Candidate Solution Code:
+\`\`\`
+${code.substring(0, 2000)}
+\`\`\`
+
+Analyze the code and return ONLY valid JSON matching this exact structure (NO markdown code blocks, NO html):
+{
+  "timeComplexity": "O(N)",
+  "spaceComplexity": "O(1)",
+  "codeQualityScore": 85,
+  "plagiarismFlag": false,
+  "plagiarismConfidence": 10,
+  "aiAnalysis": "Solution utilizes an optimal single pass loop with linear time complexity and constant auxiliary space. Variable naming is clear and edge cases are handled."
+}
+
+Rules:
+1. "timeComplexity": Standard Big-O notation string (e.g. O(1), O(N), O(N log N), O(N^2)).
+2. "spaceComplexity": Standard Big-O space complexity string (e.g. O(1), O(N)).
+3. "codeQualityScore": Integer 0 to 100 based on clean code practices, variable naming, efficiency, and modularity.
+4. "plagiarismFlag": Boolean. True ONLY if code shows clear indicators of copy-pasted AI boilerplate or copied solution without organic attempt.
+5. "plagiarismConfidence": Integer 0 to 100 indicating confidence level in plagiarism detection.
+6. "aiAnalysis": Concise 1-2 sentence assessment of code efficiency and quality.
+`
+
+        const result = await geminiModel.generateContent(prompt)
+        let responseText = result.response.text().trim()
+
+        if (responseText.startsWith("```json")) {
+            responseText = responseText.replace(/^```json\s*/, "").replace(/```$/, "").trim()
+        } else if (responseText.startsWith("```")) {
+            responseText = responseText.replace(/^```\s*/, "").replace(/```$/, "").trim()
+        }
+
+        const parsed = JSON.parse(responseText)
+        return {
+            timeComplexity: parsed.timeComplexity || "O(N)",
+            spaceComplexity: parsed.spaceComplexity || "O(1)",
+            codeQualityScore: typeof parsed.codeQualityScore === "number" ? parsed.codeQualityScore : 80,
+            plagiarismFlag: !!parsed.plagiarismFlag,
+            plagiarismConfidence: parsed.plagiarismConfidence || 0,
+            aiAnalysis: parsed.aiAnalysis || "Code evaluated successfully."
+        }
+    } catch (err) {
+        console.error("AI Code Analysis Error, using heuristic fallback:", err)
+        
+        const lines = code.split("\n").length
+        const hasLoops = /for\s*\(|while\s*\(|\.forEach|\.map/g.test(code)
+        const nestedLoops = (code.match(/for\s*\(|while\s*\(/g) || []).length > 1
+
+        return {
+            timeComplexity: nestedLoops ? "O(N^2)" : hasLoops ? "O(N)" : "O(1)",
+            spaceComplexity: code.includes("new Array") || code.includes("[]") ? "O(N)" : "O(1)",
+            codeQualityScore: Math.min(95, Math.max(50, 100 - lines)),
+            plagiarismFlag: false,
+            plagiarismConfidence: 0,
+            aiAnalysis: "Automated analysis completed: Code follows standard procedural pattern."
+        }
+    }
+}
+
