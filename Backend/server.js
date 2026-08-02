@@ -21,6 +21,7 @@ import { getGeminiModel } from "./ai/gemini.js"
 import authRoutes from "./routes/authRoutes.js"
 import examRoutes from "./routes/examRoutes.js"
 import { protect } from "./middleware/authMiddleware.js"
+import { uploadFileToCloudinary } from "./config/cloudinary.js"
 
 connectDB()
 
@@ -380,6 +381,10 @@ ${text}
                     summary = "Professional candidate profile."
                 }
 
+                // Cloudinary upload (falls back to disk if Cloudinary credentials are not set)
+                const cloudinaryUrl = await uploadFileToCloudinary(fileBuffer, file.originalname)
+                const finalFilePath = cloudinaryUrl || file.path
+
                 const parsedData = {
                     user: req.user._id,
                     folder: targetFolderId,
@@ -391,7 +396,7 @@ ${text}
                     college,
                     summary,
                     resumeText: text,
-                    filePath: file.path,
+                    filePath: finalFilePath,
                     fileHash
                 }
 

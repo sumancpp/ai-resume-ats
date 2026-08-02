@@ -480,7 +480,11 @@ const CandidateDetails = () => {
   const cleanFilePath = resume.filePath
     ? resume.filePath.replace(/\\/g, "/").replace(/^\//, "")
     : null
-  const pdfUrl = cleanFilePath ? `${backendBase}/${cleanFilePath}` : null
+  const pdfUrl = cleanFilePath
+    ? (cleanFilePath.startsWith("http://") || cleanFilePath.startsWith("https://")
+        ? cleanFilePath
+        : `${backendBase}/${cleanFilePath}`)
+    : null
 
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages)
