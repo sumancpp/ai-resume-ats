@@ -35,21 +35,19 @@ const getTransporter = () => {
 }
 
 const sendEmail = async ({ to, subject, html, text }) => {
+    const resendAccountEmail = process.env.EMAIL_USER?.trim() || "sumancoder404@gmail.com"
+
     // 0. Redirect dummy @example.com email addresses to HR admin email for real inbox delivery
     let targetEmail = to
     if (targetEmail.toLowerCase().includes("@example.com") || targetEmail.toLowerCase().endsWith("example.com")) {
-        if (process.env.EMAIL_USER && process.env.EMAIL_USER.includes("@")) {
-            console.log(`[EMAIL ROUTING NOTICE] Redirecting dummy email '${to}' to HR admin email '${process.env.EMAIL_USER.trim()}'...`)
-            targetEmail = process.env.EMAIL_USER.trim()
-        }
+        console.log(`[EMAIL ROUTING NOTICE] Redirecting dummy email '${to}' to HR admin email '${resendAccountEmail}'...`)
+        targetEmail = resendAccountEmail
     }
 
     // 1. Resend HTTPS API (Port 443 - Works seamlessly on Render, Vercel, and Cloud Servers)
     if (process.env.RESEND_API_KEY) {
         try {
-            const resendFrom = (process.env.RESEND_FROM && !process.env.RESEND_FROM.includes("sumann.in"))
-                ? process.env.RESEND_FROM
-                : "onboarding@resend.dev"
+            const resendFrom = process.env.RESEND_FROM || "TalentAI ATS <noreply@sumann.in>"
 
             let response = await fetch("https://api.resend.com/emails", {
                 method: "POST",
@@ -72,9 +70,17 @@ const sendEmail = async ({ to, subject, html, text }) => {
             } else {
                 console.warn(`[RESEND API NOTICE]: ${data.message || JSON.stringify(data)}.`)
 
-                // If Resend testing restriction triggers, retry to registered HR email
-                if (data.message && data.message.includes("testing email address") && process.env.EMAIL_USER && targetEmail !== process.env.EMAIL_USER.trim()) {
-                    console.log(`[RESEND RETRY] Retrying dispatch to Resend account email '${process.env.EMAIL_USER.trim()}'...`)
+                // If Resend testing account limitation triggers (or any domain restriction error), retry to registered Resend owner email
+                const isTestingDomainError = data.message && (
+                    data.message.includes("testing emails") ||
+                    data.message.includes("testing email address") ||
+                    data.message.includes("verify a domain") ||
+                    data.message.includes("only send") ||
+                    data.statusCode === 403
+                )
+
+                if (isTestingDomainError && targetEmail !== resendAccountEmail) {
+                    console.log(`[RESEND AUTO-REROUTE] Routing testing email for '${to}' to registered Resend owner inbox '${resendAccountEmail}'...`)
                     response = await fetch("https://api.resend.com/emails", {
                         method: "POST",
                         headers: {
@@ -83,7 +89,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
                         },
                         body: JSON.stringify({
                             from: "onboarding@resend.dev",
-                            to: [process.env.EMAIL_USER.trim()],
+                            to: [resendAccountEmail],
                             subject: `[Candidate: ${to}] ${subject}`,
                             html: html,
                             text: text
@@ -91,8 +97,10 @@ const sendEmail = async ({ to, subject, html, text }) => {
                     })
                     data = await response.json()
                     if (response.ok) {
-                        console.log(`[RESEND HTTPS API SENT TO HR] Email dispatched to ${process.env.EMAIL_USER.trim()} (ID: ${data.id})`)
+                        console.log(`[RESEND HTTPS API SENT TO OWNER] Email successfully dispatched to ${resendAccountEmail} (ID: ${data.id})`)
                         return
+                    } else {
+                        console.warn(`[RESEND RETRY ERROR]: ${data.message || JSON.stringify(data)}`)
                     }
                 }
             }
