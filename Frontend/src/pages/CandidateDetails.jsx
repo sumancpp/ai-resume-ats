@@ -153,6 +153,7 @@ const CandidateDetails = () => {
 
   useEffect(() => {
     if (resume?._id) {
+      setPdfError(false)
       fetchExamData()
     }
   }, [resume?._id])
