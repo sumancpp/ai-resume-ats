@@ -391,7 +391,7 @@ ${text}
                     college,
                     summary,
                     resumeText: text,
-                    filePath: file.path ? file.path.replace(/\\/g, "/") : "",
+                    filePath: file.path,
                     fileHash
                 }
 

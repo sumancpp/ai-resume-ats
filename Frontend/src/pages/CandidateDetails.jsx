@@ -35,9 +35,7 @@ import { getBackendUrl } from "../utils/api"
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
 
-import pdfWorker from "pdfjs-dist/build/pdf.worker.min.js?url"
-
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`
 
 const CandidateDetails = () => {
   const location = useLocation()
