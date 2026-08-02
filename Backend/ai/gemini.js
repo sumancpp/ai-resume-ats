@@ -7,8 +7,16 @@ export const getGeminiModel = () => {
                 throw new Error("CRITICAL: GEMINI_API_KEY is missing from process.env at runtime!");
             }
 
-            // Fallback list prioritizing high free-tier quota models (1,500 RPD) over restricted preview models (20 RPD)
-            const defaultModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-pro"];
+            // Validated active models with status 200 response on v1beta API endpoint
+            const defaultModels = [
+                "gemini-flash-lite-latest",
+                "gemini-2.5-flash-lite",
+                "gemini-3.5-flash-lite",
+                "gemini-3.6-flash",
+                "gemini-flash-latest",
+                "gemini-2.5-flash",
+                "gemini-2.0-flash"
+            ];
             const models = [process.env.GEMINI_MODEL, ...defaultModels].filter((m, idx, arr) => m && arr.indexOf(m) === idx);
 
             let lastError = null;
