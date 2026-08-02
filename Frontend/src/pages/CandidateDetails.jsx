@@ -33,6 +33,7 @@ import {
 } from "lucide-react"
 
 import InterviewModal from "../components/InterviewModal"
+import ConfirmModal from "../components/ConfirmModal"
 import { getBackendUrl } from "../utils/api"
 import { toast } from "react-hot-toast"
 
@@ -185,11 +186,13 @@ const CandidateDetails = () => {
     }
   }
 
-  const handleDeleteResume = async () => {
-    if (!confirm("Are you sure you want to delete this CV/Resume? After removing, it will never appear in your search results again.")) {
-      return
-    }
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+  const handleDeleteResume = () => {
+    setShowDeleteConfirm(true)
+  }
+
+  const executeDeleteResume = async () => {
     setDeletingResume(true)
     try {
       const backendUrl = getBackendUrl()
@@ -200,6 +203,7 @@ const CandidateDetails = () => {
 
       localStorage.removeItem("talent_ai_candidate_id")
       toast.success("Resume removed from database permanently.")
+      setShowDeleteConfirm(false)
       navigate("/")
     } catch (err) {
       toast.error("Error deleting resume: " + (err.response?.data?.message || err.message))
@@ -1508,6 +1512,18 @@ const CandidateDetails = () => {
           </div>
         </div>
       )}
+
+      {/* CONFIRM DELETE MODAL */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={executeDeleteResume}
+        title="Delete Candidate Dossier?"
+        description="Are you sure you want to permanently delete this candidate resume? This action will remove the record from your database and cannot be undone."
+        confirmText="Delete Permanently"
+        loading={deletingResume}
+        variant="danger"
+      />
 
     </div>
   )

@@ -3,6 +3,8 @@ import axios from "axios"
 import { FolderPlus, Folder, Trash2, Layers, Briefcase, X } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
+import { toast } from "react-hot-toast"
+import ConfirmModal from "./ConfirmModal"
 
 const COLOR_OPTIONS = [
   { name: "indigo", bg: "bg-indigo-500/10", border: "border-indigo-500/30", text: "text-indigo-300", activeBg: "bg-indigo-600", dot: "bg-indigo-500" },
@@ -93,23 +95,34 @@ const FolderManager = ({ activeFolder, setActiveFolder, onFolderChange, refreshK
     }
   }
 
-  const handleDeleteFolder = async (e, folderId) => {
-    e.stopPropagation()
-    if (!window.confirm("Are you sure you want to delete this job folder? Resumes will move to General Pool.")) return
+  const [deleteFolderId, setDeleteFolderId] = useState(null)
+  const [deletingFolder, setDeletingFolder] = useState(false)
 
-    const token = localStorage.getItem("talent_ai_token")
+  const handleDeleteFolder = (e, folderId) => {
+    e.stopPropagation()
+    setDeleteFolderId(folderId)
+  }
+
+  const executeDeleteFolder = async () => {
+    if (!deleteFolderId) return
+    const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
     try {
-      const url = getApiUrl(`/folders/${folderId}`)
+      setDeletingFolder(true)
+      const url = getApiUrl(`/folders/${deleteFolderId}`)
       await axios.delete(url, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      if (activeFolder === folderId) {
+      if (activeFolder === deleteFolderId) {
         setActiveFolder("all")
         if (onFolderChange) onFolderChange("all")
       }
+      toast.success("Job folder deleted successfully.")
+      setDeleteFolderId(null)
       fetchFolders()
     } catch (err) {
-      console.error("Delete folder error:", err)
+      toast.error("Delete folder error: " + (err.response?.data?.message || err.message))
+    } finally {
+      setDeletingFolder(false)
     }
   }
 
@@ -310,6 +323,18 @@ const FolderManager = ({ activeFolder, setActiveFolder, onFolderChange, refreshK
           </div>
         </div>
       )}
+
+      {/* CONFIRM DELETE FOLDER MODAL */}
+      <ConfirmModal
+        isOpen={Boolean(deleteFolderId)}
+        onClose={() => setDeleteFolderId(null)}
+        onConfirm={executeDeleteFolder}
+        title="Delete Job Role Pool?"
+        description="Are you sure you want to delete this job folder? Resumes within this folder will move to the General Candidate Pool."
+        confirmText="Delete Folder"
+        loading={deletingFolder}
+        variant="danger"
+      />
     </div>
   )
 }

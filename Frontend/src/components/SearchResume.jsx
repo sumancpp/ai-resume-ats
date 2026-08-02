@@ -23,6 +23,7 @@ import {
 
 import { getBackendUrl } from "../utils/api"
 import { toast } from "react-hot-toast"
+import ConfirmModal from "./ConfirmModal"
 
 const SearchResume = () => {
   const { token, user } = useAuth()
@@ -96,24 +97,32 @@ const SearchResume = () => {
     }
   }
 
-  const handleDeleteResume = async (e, resumeId) => {
+  const [deleteTargetId, setDeleteTargetId] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  const handleDeleteResume = (e, resumeId) => {
     e.stopPropagation()
     if (!isAuthenticated) {
       navigate("/login")
       return
     }
-    if (!confirm("Are you sure you want to delete this candidate CV? It will be removed from your search results.")) {
-      return
-    }
+    setDeleteTargetId(resumeId)
+  }
 
+  const executeDeleteResume = async () => {
+    if (!deleteTargetId) return
     try {
+      setDeleteLoading(true)
       const headers = { Authorization: `Bearer ${token}` }
-      await axios.delete(getApiUrl(`/resumes/${resumeId}`), { headers })
-      setResumes((prev) => prev.filter((r) => r._id !== resumeId))
+      await axios.delete(getApiUrl(`/resumes/${deleteTargetId}`), { headers })
+      setResumes((prev) => prev.filter((r) => r._id !== deleteTargetId))
       setRefreshFolderKey((k) => k + 1)
       toast.success("Resume deleted permanently.")
+      setDeleteTargetId(null)
     } catch (err) {
       toast.error("Error deleting resume: " + (err.response?.data?.message || err.message))
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -915,6 +924,17 @@ const SearchResume = () => {
         </section>
       )}
 
+      {/* CONFIRM DELETE MODAL */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTargetId)}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={executeDeleteResume}
+        title="Delete Candidate Resume?"
+        description="Are you sure you want to permanently delete this candidate resume? It will be removed from your database and search results."
+        confirmText="Delete Permanently"
+        loading={deleteLoading}
+        variant="danger"
+      />
     </div>
   )
 }
