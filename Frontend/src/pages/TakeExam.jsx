@@ -672,16 +672,22 @@ export default function TakeExam() {
                                             }}
                                             onMount={(editor) => {
                                                 editor.onKeyDown((e) => {
-                                                    const isCtrlOrCmd = e.ctrlKey || e.metaKey
+                                                    const isCtrlOrCmd = e.ctrlKey || e.metaKey || e.browserEvent?.ctrlKey || e.browserEvent?.metaKey
                                                     if (
-                                                        e.keyCode === 33 ||
-                                                        e.keyCode === 52 ||
-                                                        (isCtrlOrCmd && (e.code === "KeyC" || e.code === "KeyV" || e.code === "KeyU"))
+                                                        isCtrlOrCmd && (
+                                                            e.keyCode === 33 ||
+                                                            e.keyCode === 52 ||
+                                                            e.keyCode === 54 ||
+                                                            e.code === "KeyC" ||
+                                                            e.code === "KeyV" ||
+                                                            e.code === "KeyX" ||
+                                                            e.code === "KeyU"
+                                                        )
                                                     ) {
                                                         e.preventDefault()
                                                         e.stopPropagation()
                                                         toast.error("🚫 Security Policy: Copy/pasting is disabled inside the code editor.")
-                                                        logProctoringEvent("PASTE_ATTEMPT", "Attempted paste inside Monaco code editor")
+                                                        logProctoringEvent("PASTE_ATTEMPT", "Attempted copy/paste inside Monaco code editor")
                                                     }
                                                 })
                                             }}

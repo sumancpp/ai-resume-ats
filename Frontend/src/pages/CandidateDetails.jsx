@@ -625,7 +625,7 @@ const CandidateDetails = () => {
         </motion.div>
 
         {/* MAIN 2-COLUMN DOSSIER GRID FOR PRINT/PDF CAPTURE */}
-        <div ref={reportRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-[#0F1012] p-2 rounded-3xl">
+        <div ref={reportRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-[#0F1012] p-2 rounded-3xl">
           
           {/* LEFT COLUMN: CANDIDATE SUMMARY & 5 STAGE MAIL ACTIONS */}
           <motion.div
@@ -1034,11 +1034,11 @@ const CandidateDetails = () => {
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col justify-between min-h-[650px]"
+            className="lg:col-span-7 bg-[#16171B] border border-[#272930] rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col justify-start gap-4 lg:sticky lg:top-6 self-start min-h-[650px]"
           >
             
             {/* VIEW CONTROLS & TOOLBAR */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#272930] pb-4 mb-4 text-xs text-zinc-400">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#272930] pb-4 mb-0 text-xs text-zinc-400">
               <div className="flex items-center space-x-2">
                 <FileText className="w-4 h-4 text-violet-400" />
                 <span className="font-serif italic font-normal text-white text-base truncate max-w-[200px]">
