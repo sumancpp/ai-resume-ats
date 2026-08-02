@@ -826,11 +826,11 @@ const SearchResume = () => {
                     <div>
                       {/* Header */}
                       <div className="flex items-start justify-between gap-3 mb-4">
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-3 min-w-0 flex-1">
                           <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 text-white font-serif font-bold text-base flex items-center justify-center shadow-md shrink-0">
                             {resume.name ? resume.name.charAt(0).toUpperCase() : "C"}
                           </div>
-                          <div className="truncate">
+                          <div className="truncate min-w-0">
                             <h4 className="font-serif text-lg font-normal text-[#F9F8F6] group-hover:text-violet-300 transition-colors truncate">
                               {resume.name || "Candidate Dossier"}
                             </h4>
