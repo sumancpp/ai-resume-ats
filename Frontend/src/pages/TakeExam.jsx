@@ -20,6 +20,7 @@ import {
 
 import { getBackendUrl } from "../utils/api"
 import { toast } from "react-hot-toast"
+import Editor from "@monaco-editor/react"
 
 export default function TakeExam() {
     const { token } = useParams()
@@ -651,13 +652,41 @@ export default function TakeExam() {
                                         </button>
                                     </div>
 
-                                    <textarea
-                                        value={codeSubmissions[currentQ.id] || ""}
-                                        onChange={(e) => handleCodeChange(currentQ.id, e.target.value)}
-                                        rows={10}
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-sm text-indigo-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                                        placeholder="// Write your solution function in your chosen language..."
-                                    />
+                                    <div className="h-96 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 shadow-inner">
+                                        <Editor
+                                            height="100%"
+                                            language={selectedLanguages[currentQ.id] || "javascript"}
+                                            theme="vs-dark"
+                                            value={codeSubmissions[currentQ.id] || ""}
+                                            onChange={(val) => handleCodeChange(currentQ.id, val || "")}
+                                            options={{
+                                                minimap: { enabled: false },
+                                                fontSize: 14,
+                                                fontFamily: "Fira Code, monospace, Menlo, Courier New",
+                                                scrollBeyondLastLine: false,
+                                                automaticLayout: true,
+                                                contextmenu: false,
+                                                lineNumbers: "on",
+                                                roundedSelection: true,
+                                                cursorBlinking: "smooth"
+                                            }}
+                                            onMount={(editor) => {
+                                                editor.onKeyDown((e) => {
+                                                    const isCtrlOrCmd = e.ctrlKey || e.metaKey
+                                                    if (
+                                                        e.keyCode === 33 ||
+                                                        e.keyCode === 52 ||
+                                                        (isCtrlOrCmd && (e.code === "KeyC" || e.code === "KeyV" || e.code === "KeyU"))
+                                                    ) {
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        toast.error("🚫 Security Policy: Copy/pasting is disabled inside the code editor.")
+                                                        logProctoringEvent("PASTE_ATTEMPT", "Attempted paste inside Monaco code editor")
+                                                    }
+                                                })
+                                            }}
+                                        />
+                                    </div>
 
                                     {/* Test Results Banner */}
                                     {testResults[currentQ.id] && (
