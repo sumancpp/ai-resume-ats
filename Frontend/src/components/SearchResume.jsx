@@ -343,7 +343,13 @@ const SearchResume = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.96 }}
-              onClick={() => navigate(isAuthenticated ? "#search-workspace" : "/signup")}
+              onClick={() => {
+                if (isAuthenticated) {
+                  document.getElementById("search-workspace")?.scrollIntoView({ behavior: "smooth" })
+                } else {
+                  navigate("/signup")
+                }
+              }}
               className="px-7 py-3.5 rounded-full bg-[#FAF8F5] !text-[#0F1012] text-xs font-bold shadow-xl flex items-center gap-2 cursor-pointer transition"
             >
               <span>{isAuthenticated ? "Explore Candidate Workspace" : "Get Started — Free"}</span>

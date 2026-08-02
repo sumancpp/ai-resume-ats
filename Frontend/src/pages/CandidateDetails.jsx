@@ -117,10 +117,12 @@ const CandidateDetails = () => {
     }
   }, [resume?._id])
 
-  // Fetch candidate details by ID on refresh if state was lost
+  // Fetch candidate details by ID on refresh or fallback to latest candidate in workspace
   useEffect(() => {
     if (!resume && candidateId) {
       fetchCandidateById(candidateId)
+    } else if (!resume && !candidateId) {
+      fetchLatestCandidate()
     }
   }, [candidateId, resume])
 
@@ -139,6 +141,27 @@ const CandidateDetails = () => {
       }
     } catch (err) {
       console.error("Fetch candidate by ID error:", err)
+    } finally {
+      setLoadingCandidate(false)
+    }
+  }
+
+  const fetchLatestCandidate = async () => {
+    try {
+      setLoadingCandidate(true)
+      const backendUrl = getBackendUrl()
+      const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
+      const res = await axios.get(`${backendUrl}/resumes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (res.data.success && res.data.resumes && res.data.resumes.length > 0) {
+        const first = res.data.resumes[0]
+        setResume(first)
+        setCandidateEmail(first.email || "")
+      }
+    } catch (err) {
+      console.error("Fetch latest candidate error:", err)
     } finally {
       setLoadingCandidate(false)
     }
