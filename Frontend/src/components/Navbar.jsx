@@ -78,25 +78,6 @@ const Navbar = () => {
             </Link>
 
             <Link
-              to="/candidate"
-              className={`relative flex items-center gap-2 px-5 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
-                isActive("/candidate") || location.pathname.startsWith("/candidate")
-                  ? "text-[#F9F8F6] bg-[#23252E] shadow-sm font-semibold"
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <UserCheck className={`w-3.5 h-3.5 ${isActive("/candidate") || location.pathname.startsWith("/candidate") ? "text-violet-400" : "text-zinc-400"}`} />
-              <span>Candidate Workspace</span>
-              {(isActive("/candidate") || location.pathname.startsWith("/candidate")) && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute bottom-1 left-4 right-4 h-[2px] bg-violet-500 rounded-full"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-            </Link>
-
-            <Link
               to="/dashboard"
               className={`relative flex items-center gap-2 px-5 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
                 isActive("/dashboard")
@@ -203,17 +184,6 @@ const Navbar = () => {
             >
               <Search className="w-4 h-4" />
               <span>Resume Search</span>
-            </Link>
-
-            <Link
-              to="/candidate"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-medium ${
-                isActive("/candidate") || location.pathname.startsWith("/candidate") ? "bg-violet-600 text-white font-semibold" : "text-zinc-300 bg-[#16171B] border border-[#272930]"
-              }`}
-            >
-              <UserCheck className="w-4 h-4" />
-              <span>Candidate Workspace</span>
             </Link>
 
             <Link
