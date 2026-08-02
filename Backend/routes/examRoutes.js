@@ -19,6 +19,7 @@ import {
     sendShortlistNotice,
     sendRound1Passed,
     sendOfferLetter,
+    downloadOfferLetter,
     logProctoringEvent
 } from "../controllers/examController.js"
 
@@ -45,6 +46,7 @@ router.get("/resume/:resumeId", protect, getExamByResumeId)
 router.patch("/interview/:examId", protect, updateInterviewStatus)
 router.post("/interview-invite/:resumeId", protect, sendVideoInterviewInvite)
 router.post("/confirm-hiring/:resumeId", protect, sendConfirmation)
+router.get("/download-offer-letter/:resumeId", protect, downloadOfferLetter)
 
 // ===================================
 // PROTECTED HR STAGE & CUSTOM EXAM ROUTES

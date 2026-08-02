@@ -3,6 +3,7 @@ import Exam from "../models/Exam.js"
 import Resume from "../models/Resume.js"
 import { generateExamQuestions, evaluateExamSubmission, analyzeCodeComplexityAndQuality } from "../ai/examAiService.js"
 import { runCode, runJsCode } from "../helpers/codeRunner.js"
+import { generateOfferLetterPdf } from "../utils/generateOfferLetterPdf.js"
 import {
     sendExamInviteEmail,
     sendHiringConfirmationEmail,
@@ -455,11 +456,28 @@ export const sendConfirmation = async (req, res) => {
         }
 
         const recipientEmail = resume.email || req.body.email || "candidate@example.com"
+        const candidateRole = req.body.roleCategory || resume.roleCategory || "Software Engineer"
+        const candidateName = resume.name || "Candidate"
+
+        let pdfBuffer = null
+        try {
+            pdfBuffer = await generateOfferLetterPdf({
+                candidateName,
+                candidateEmail: recipientEmail,
+                roleCategory: candidateRole,
+                ctc: req.body.ctc || "As per discussion",
+                joiningDate: req.body.joiningDate || "Immediate",
+                hrMessage: req.body.hrMessage || ""
+            })
+        } catch (pdfErr) {
+            console.error("Error generating PDF offer letter in sendConfirmation:", pdfErr)
+        }
 
         await sendHiringConfirmationEmail({
             to: recipientEmail,
-            candidateName: resume.name || "Candidate",
-            roleCategory: resume.roleCategory || "Software Engineer"
+            candidateName,
+            roleCategory: candidateRole,
+            pdfBuffer
         })
 
         resume.hiringStatus = "hired"
@@ -467,7 +485,7 @@ export const sendConfirmation = async (req, res) => {
 
         res.json({
             success: true,
-            message: `Hiring confirmation email successfully sent to ${recipientEmail}!`
+            message: `Hiring confirmation & PDF Offer Letter email successfully sent to ${recipientEmail}!`
         })
     } catch (error) {
         console.error("Send confirmation email error:", error)
@@ -849,17 +867,34 @@ export const sendOfferLetter = async (req, res) => {
 
         for (const resume of resumes) {
             const emailToSend = resume.email || `${resume.name.toLowerCase().replace(/\s+/g, ".")}@example.com`
+            const candidateName = resume.name || "Candidate"
+            const candidateRole = roleCategory || resume.roleCategory || "Software Engineer"
 
             resume.hiringStatus = "hired"
             await resume.save()
 
+            let pdfBuffer = null
+            try {
+                pdfBuffer = await generateOfferLetterPdf({
+                    candidateName,
+                    candidateEmail: emailToSend,
+                    roleCategory: candidateRole,
+                    ctc: ctc || "As per discussion",
+                    joiningDate: joiningDate || "Immediate",
+                    hrMessage: hrMessage || ""
+                })
+            } catch (pdfErr) {
+                console.error("Error generating PDF offer letter for candidate:", candidateName, pdfErr)
+            }
+
             await sendOfferLetterEmail({
                 to: emailToSend,
-                candidateName: resume.name || "Candidate",
-                roleCategory: roleCategory || resume.roleCategory || "Software Engineer",
+                candidateName,
+                roleCategory: candidateRole,
                 ctc,
                 joiningDate,
-                hrMessage
+                hrMessage,
+                pdfBuffer
             })
             sentCount++
         }
@@ -867,11 +902,48 @@ export const sendOfferLetter = async (req, res) => {
         res.json({
             success: true,
             sentCount,
-            message: `Official Offer Letter email successfully sent to ${sentCount} candidate(s)!`
+            message: `Official Offer Letter PDF email successfully sent to ${sentCount} candidate(s)!`
         })
     } catch (error) {
         console.error("Send offer letter error:", error)
         res.status(500).json({ success: false, message: "Error sending offer letter emails" })
+    }
+}
+
+/**
+ * Download / Preview Official Offer Letter PDF for Candidate
+ */
+export const downloadOfferLetter = async (req, res) => {
+    try {
+        const { resumeId } = req.params
+        const { roleCategory, ctc, joiningDate, hrMessage } = req.query
+
+        const resume = await Resume.findOne({ _id: resumeId, user: req.user._id })
+        if (!resume) {
+            return res.status(404).json({ success: false, message: "Candidate resume not found" })
+        }
+
+        const candidateName = resume.name || "Candidate"
+        const role = roleCategory || resume.roleCategory || "Software Engineer"
+
+        const pdfBuffer = await generateOfferLetterPdf({
+            candidateName,
+            candidateEmail: resume.email || "",
+            roleCategory: role,
+            ctc: ctc || "As per discussion",
+            joiningDate: joiningDate || "Immediate",
+            hrMessage: hrMessage || ""
+        })
+
+        const fileName = `Official_Offer_Letter_${candidateName.replace(/\s+/g, "_")}.pdf`
+
+        res.setHeader("Content-Type", "application/pdf")
+        res.setHeader("Content-Disposition", `inline; filename="${fileName}"`)
+        res.setHeader("Content-Length", pdfBuffer.length)
+        return res.send(pdfBuffer)
+    } catch (error) {
+        console.error("Download offer letter PDF error:", error)
+        res.status(500).json({ success: false, message: "Error generating Offer Letter PDF" })
     }
 }
 

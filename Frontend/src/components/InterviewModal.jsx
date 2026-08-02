@@ -276,7 +276,7 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                             className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-600/30"
                         >
                             <Send className="w-4 h-4" />
-                            Send Final Selection & Offer Email
+                            Send Final Selection & PDF Offer Email
                         </button>
                     </div>
                 </div>

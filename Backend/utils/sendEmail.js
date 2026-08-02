@@ -34,7 +34,7 @@ const getTransporter = () => {
     return cachedTransporter
 }
 
-const sendEmail = async ({ to, subject, html, text }) => {
+const sendEmail = async ({ to, subject, html, text, attachments = [] }) => {
     const resendAccountEmail = process.env.EMAIL_USER?.trim() || "sumancoder404@gmail.com"
 
     // 0. Redirect dummy @example.com email addresses to HR admin email for real inbox delivery
@@ -44,10 +44,34 @@ const sendEmail = async ({ to, subject, html, text }) => {
         targetEmail = resendAccountEmail
     }
 
+    const formattedResendAttachments = attachments && attachments.length > 0
+        ? attachments.map(att => ({
+            filename: att.filename || "attachment.pdf",
+            content: Buffer.isBuffer(att.content) ? att.content.toString("base64") : att.content
+        }))
+        : undefined
+
+    const formattedBrevoAttachments = attachments && attachments.length > 0
+        ? attachments.map(att => ({
+            name: att.filename || "attachment.pdf",
+            content: Buffer.isBuffer(att.content) ? att.content.toString("base64") : att.content
+        }))
+        : undefined
+
     // 1. Resend HTTPS API (Port 443 - Works seamlessly on Render, Vercel, and Cloud Servers)
     if (process.env.RESEND_API_KEY) {
         try {
             const resendFrom = process.env.RESEND_FROM || "TalentAI ATS <noreply@sumann.in>"
+            const resendBody = {
+                from: resendFrom,
+                to: [targetEmail],
+                subject: subject,
+                html: html,
+                text: text
+            }
+            if (formattedResendAttachments) {
+                resendBody.attachments = formattedResendAttachments
+            }
 
             let response = await fetch("https://api.resend.com/emails", {
                 method: "POST",
@@ -55,17 +79,11 @@ const sendEmail = async ({ to, subject, html, text }) => {
                     "Authorization": `Bearer ${process.env.RESEND_API_KEY.trim()}`,
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({
-                    from: resendFrom,
-                    to: [targetEmail],
-                    subject: subject,
-                    html: html,
-                    text: text
-                })
+                body: JSON.stringify(resendBody)
             })
             let data = await response.json()
             if (response.ok) {
-                console.log(`[RESEND HTTPS API SENT] Email successfully dispatched to ${targetEmail} (ID: ${data.id})`)
+                console.log(`[RESEND HTTPS API SENT] Email successfully dispatched to ${targetEmail} (ID: ${data.id}) with ${attachments.length} attachment(s)`)
                 return
             } else {
                 console.warn(`[RESEND API NOTICE]: ${data.message || JSON.stringify(data)}.`)
@@ -81,19 +99,23 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
                 if (isTestingDomainError && targetEmail !== resendAccountEmail) {
                     console.log(`[RESEND AUTO-REROUTE] Routing testing email for '${to}' to registered Resend owner inbox '${resendAccountEmail}'...`)
+                    const retryBody = {
+                        from: "onboarding@resend.dev",
+                        to: [resendAccountEmail],
+                        subject: `[Candidate: ${to}] ${subject}`,
+                        html: html,
+                        text: text
+                    }
+                    if (formattedResendAttachments) {
+                        retryBody.attachments = formattedResendAttachments
+                    }
                     response = await fetch("https://api.resend.com/emails", {
                         method: "POST",
                         headers: {
                             "Authorization": `Bearer ${process.env.RESEND_API_KEY.trim()}`,
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({
-                            from: "onboarding@resend.dev",
-                            to: [resendAccountEmail],
-                            subject: `[Candidate: ${to}] ${subject}`,
-                            html: html,
-                            text: text
-                        })
+                        body: JSON.stringify(retryBody)
                     })
                     data = await response.json()
                     if (response.ok) {
@@ -113,22 +135,27 @@ const sendEmail = async ({ to, subject, html, text }) => {
     if (process.env.BREVO_API_KEY) {
         try {
             const senderEmail = process.env.EMAIL_USER || "sumancoder404@gmail.com"
+            const brevoBody = {
+                sender: { name: "TalentAI Security", email: senderEmail },
+                to: [{ email: to }],
+                subject: subject,
+                htmlContent: html,
+                textContent: text
+            }
+            if (formattedBrevoAttachments) {
+                brevoBody.attachment = formattedBrevoAttachments
+            }
+
             const response = await fetch("https://api.brevo.com/v3/smtp/email", {
                 method: "POST",
                 headers: {
                     "api-key": process.env.BREVO_API_KEY.trim(),
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({
-                    sender: { name: "TalentAI Security", email: senderEmail },
-                    to: [{ email: to }],
-                    subject: subject,
-                    htmlContent: html,
-                    textContent: text
-                })
+                body: JSON.stringify(brevoBody)
             })
             if (response.ok) {
-                console.log(`[BREVO HTTPS API SENT] Verification code successfully emailed to ${to}`)
+                console.log(`[BREVO HTTPS API SENT] Email successfully sent to ${to} with ${attachments.length} attachment(s)`)
                 return
             } else {
                 const brevoData = await response.json()
@@ -150,12 +177,15 @@ const sendEmail = async ({ to, subject, html, text }) => {
             html,
             priority: "high"
         }
+        if (attachments && attachments.length > 0) {
+            mailOptions.attachments = attachments
+        }
 
         try {
             const transporter = getTransporter()
             if (transporter) {
                 await transporter.sendMail(mailOptions)
-                console.log(`[GMAIL SMTP SENT] Verification code emailed to ${to}`)
+                console.log(`[GMAIL SMTP SENT] Email sent to ${to} with ${attachments.length} attachment(s)`)
                 return
             }
         } catch (errPool) {
@@ -171,7 +201,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
                 auth: { user: emailUser, pass: emailPass }
             })
             await directTransporter.sendMail(mailOptions)
-            console.log(`[DIRECT GMAIL SENT] Verification code emailed to ${to}`)
+            console.log(`[DIRECT GMAIL SENT] Email sent to ${to} with ${attachments.length} attachment(s)`)
             return
         } catch (errDirect) {
             console.error(`[SMTP Dispatch Error]: ${errDirect.message}`)
@@ -180,7 +210,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
     // 4. Fallback Terminal Logging (Guarantees local testing & unverified domain testing never hangs)
     console.log(`\n======================================================`)
-    console.log(`[SECURE SERVER LOG (Fallback)] Email to ${to}:\nSubject: ${subject}\nText: ${text}`)
+    console.log(`[SECURE SERVER LOG (Fallback)] Email to ${to}:\nSubject: ${subject}\nAttachments: ${attachments.length} file(s)\nText: ${text}`)
     console.log(`======================================================\n`)
 }
 
@@ -222,37 +252,6 @@ export const sendExamInviteEmail = async ({ to, candidateName = "Candidate", exa
     `
 
     const text = `Dear ${candidateName},\n\nYour CV has been shortlisted! Please complete your technical assessment link before ${formattedDate}.\n\nExam Link: ${examLink}\n\nGood luck!\nTalentAI Team`
-
-    return await sendEmail({ to, subject, html, text })
-}
-
-export const sendHiringConfirmationEmail = async ({ to, candidateName = "Candidate", roleCategory = "Position" }) => {
-    const subject = `🎉 Congratulations! Selection & Hiring Offer Confirmation - ${roleCategory}`
-    
-    const html = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #064e3b; border-radius: 12px; padding: 32px; color: #f8fafc; border: 1px solid #059669;">
-        <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #34d399; margin: 0; font-size: 32px; font-weight: 800;">Congratulations!</h1>
-            <p style="color: #a7f3d0; font-size: 16px; margin-top: 4px;">Offer Confirmation & Selection Notice</p>
-        </div>
-
-        <p style="font-size: 16px; color: #ecfdf5; line-height: 1.6;">Dear <strong>${candidateName}</strong>,</p>
-
-        <p style="font-size: 16px; color: #ecfdf5; line-height: 1.6;">We are thrilled to inform you that you have <strong>SUCCESSFULLY PASSED</strong> both the Technical Assessment and Interview rounds for the role of <strong>${roleCategory}</strong>!</p>
-
-        <div style="background-color: #022c22; border-left: 4px solid #10b981; border-radius: 6px; padding: 18px; margin: 24px 0;">
-            <h3 style="margin-top: 0; color: #6ee7b7; font-size: 16px;">📌 Next Steps:</h3>
-            <p style="color: #a7f3d0; font-size: 14px; margin: 0; line-height: 1.6;">Our HR Team will be reaching out to you shortly via phone and email to discuss your offer letter, onboarding timeline, and document verification.</p>
-        </div>
-
-        <p style="font-size: 16px; color: #ecfdf5; text-align: center; margin-top: 24px; font-weight: 600;">Welcome to the team!</p>
-
-        <hr style="border: 0; border-top: 1px solid #047857; margin: 32px 0 16px 0;">
-        <p style="font-size: 12px; color: #6ee7b7; text-align: center; margin: 0;">© TalentAI ATS Recruitment Platform. All rights reserved.</p>
-    </div>
-    `
-
-    const text = `Dear ${candidateName},\n\nCongratulations! You have successfully passed all evaluation rounds for the ${roleCategory} role. Our HR team will reach out shortly.\n\nBest regards,\nTalentAI Team`
 
     return await sendEmail({ to, subject, html, text })
 }
@@ -431,7 +430,7 @@ export const sendRound1PassedEmail = async ({ to, candidateName = "Candidate", e
                 🎥 Join Jitsi Video Room
             </a>
         </div>
-
+        
         <hr style="border: 0; border-top: 1px solid #334155; margin: 32px 0 16px 0;">
         <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">© TalentAI ATS Recruitment Platform. All rights reserved.</p>
     </div>
@@ -442,8 +441,68 @@ export const sendRound1PassedEmail = async ({ to, candidateName = "Candidate", e
     return await sendEmail({ to, subject, html, text })
 }
 
-export const sendOfferLetterEmail = async ({ to, candidateName = "Candidate", roleCategory = "Software Engineer", ctc = "As per discussion", joiningDate = "Immediate", hrMessage = "" }) => {
+export const sendHiringConfirmationEmail = async ({ to, candidateName = "Candidate", roleCategory = "Position", pdfBuffer = null, attachments = [] }) => {
+    const subject = `🎉 Congratulations! Selection & Hiring Offer Confirmation - ${roleCategory}`
+    
+    let emailAttachments = [...attachments]
+    if (pdfBuffer) {
+        const sanitizedName = candidateName.replace(/\s+/g, "_")
+        emailAttachments.push({
+            filename: `Official_Offer_Letter_${sanitizedName}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf"
+        })
+    }
+
+    const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #064e3b; border-radius: 12px; padding: 32px; color: #f8fafc; border: 1px solid #059669;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #34d399; margin: 0; font-size: 32px; font-weight: 800;">Congratulations!</h1>
+            <p style="color: #a7f3d0; font-size: 16px; margin-top: 4px;">Offer Confirmation & Selection Notice</p>
+        </div>
+
+        <p style="font-size: 16px; color: #ecfdf5; line-height: 1.6;">Dear <strong>${candidateName}</strong>,</p>
+
+        <p style="font-size: 16px; color: #ecfdf5; line-height: 1.6;">We are thrilled to inform you that you have <strong>SUCCESSFULLY PASSED</strong> both the Technical Assessment and Interview rounds for the role of <strong>${roleCategory}</strong>!</p>
+
+        <div style="background-color: #022c22; border-left: 4px solid #10b981; border-radius: 6px; padding: 18px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #6ee7b7; font-size: 16px;">📌 Next Steps & Offer Document:</h3>
+            <p style="color: #a7f3d0; font-size: 14px; margin: 0; line-height: 1.6;">Please find your official <strong>Job Offer Letter PDF attached</strong> to this email. Our HR Team will be reaching out to you shortly regarding onboarding timeline and document verification.</p>
+        </div>
+
+        <p style="font-size: 16px; color: #ecfdf5; text-align: center; margin-top: 24px; font-weight: 600;">Welcome to the team!</p>
+
+        <hr style="border: 0; border-top: 1px solid #047857; margin: 32px 0 16px 0;">
+        <p style="font-size: 12px; color: #6ee7b7; text-align: center; margin: 0;">© TalentAI ATS Recruitment Platform. All rights reserved.</p>
+    </div>
+    `
+
+    const text = `Dear ${candidateName},\n\nCongratulations! You have successfully passed all evaluation rounds for the ${roleCategory} role. Your official Job Offer Letter PDF is attached to this email.\n\nBest regards,\nTalentAI Team`
+
+    return await sendEmail({ to, subject, html, text, attachments: emailAttachments })
+}
+
+export const sendOfferLetterEmail = async ({
+    to,
+    candidateName = "Candidate",
+    roleCategory = "Software Engineer",
+    ctc = "As per discussion",
+    joiningDate = "Immediate",
+    hrMessage = "",
+    pdfBuffer = null,
+    attachments = []
+}) => {
     const subject = `🏆 Official Job Offer Letter - ${roleCategory} | TalentAI`
+
+    let emailAttachments = [...attachments]
+    if (pdfBuffer) {
+        const sanitizedName = candidateName.replace(/\s+/g, "_")
+        emailAttachments.push({
+            filename: `Official_Offer_Letter_${sanitizedName}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf"
+        })
+    }
 
     const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #064e3b; border-radius: 12px; padding: 32px; color: #f8fafc; border: 1px solid #059669;">
@@ -475,18 +534,16 @@ export const sendOfferLetterEmail = async ({ to, candidateName = "Candidate", ro
             ${hrMessage ? `<div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #047857; color: #a7f3d0; font-size: 13px;"><strong>Message from HR:</strong> ${hrMessage}</div>` : ''}
         </div>
 
-        <p style="font-size: 15px; color: #ecfdf5; line-height: 1.6;">Our HR operations team will follow up with the formal agreement documents for your signature. Welcome onboard!</p>
+        <p style="font-size: 15px; color: #ecfdf5; line-height: 1.6;">📎 <strong>Your Official Offer Letter PDF document is attached to this email.</strong> Please review the terms, sign, and reply to confirm your acceptance. Welcome onboard!</p>
 
         <hr style="border: 0; border-top: 1px solid #047857; margin: 32px 0 16px 0;">
         <p style="font-size: 12px; color: #6ee7b7; text-align: center; margin: 0;">© TalentAI ATS Recruitment Platform. All rights reserved.</p>
     </div>
     `
 
-    const text = `Dear ${candidateName},\n\nCongratulations! We are delighted to offer you the position of ${roleCategory}!\n\nCompensation (CTC): ${ctc}\nJoining Date: ${joiningDate}\n\n${hrMessage ? "HR Note: " + hrMessage + "\n\n" : ""}Welcome to the team!\nTalentAI HR Team`
+    const text = `Dear ${candidateName},\n\nCongratulations! We are delighted to offer you the position of ${roleCategory}!\n\nCompensation (CTC): ${ctc}\nJoining Date: ${joiningDate}\n\n${hrMessage ? "HR Note: " + hrMessage + "\n\n" : ""}Your Official Job Offer Letter PDF document is attached to this email.\n\nWelcome to the team!\nTalentAI HR Team`
 
-    return await sendEmail({ to, subject, html, text })
+    return await sendEmail({ to, subject, html, text, attachments: emailAttachments })
 }
 
 export default sendEmail
-
-

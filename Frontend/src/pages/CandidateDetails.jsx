@@ -501,6 +501,18 @@ const CandidateDetails = () => {
     }
   }
 
+  const handleDownloadOfferPdf = () => {
+    const backendUrl = getBackendUrl()
+    const query = new URLSearchParams({
+      roleCategory: offerForm.roleCategory || resume?.roleCategory || "",
+      ctc: offerForm.ctc || "",
+      joiningDate: offerForm.joiningDate || "",
+      hrMessage: offerForm.hrMessage || ""
+    }).toString()
+
+    window.open(`${backendUrl}/api/exams/download-offer-letter/${resume._id}?${query}`, "_blank")
+  }
+
   if (loadingCandidate) {
     return (
       <div className="min-h-[calc(100vh-5rem)] bg-[#0F1012] flex flex-col items-center justify-center p-6 text-center text-[#F9F8F6]">
@@ -1719,21 +1731,34 @@ const CandidateDetails = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-between pt-2">
               <button
-                onClick={() => setActiveModal(null)}
-                className="px-4 py-2 rounded-full text-xs text-zinc-400 hover:text-white transition"
+                type="button"
+                onClick={handleDownloadOfferPdf}
+                disabled={!offerForm.roleCategory}
+                className="px-4 py-2 rounded-full bg-[#0F1012] hover:bg-zinc-800 text-amber-400 border border-amber-500/30 text-xs font-semibold transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                title="Preview and download the generated PDF Offer Letter"
               >
-                Cancel
+                <Download className="w-3.5 h-3.5" />
+                <span>Preview PDF</span>
               </button>
-              <button
-                onClick={handleSendOfferLetter}
-                disabled={actionLoading || !offerForm.roleCategory || !offerForm.joiningDate}
-                className="px-6 py-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-              >
-                <span>{actionLoading ? "Sending..." : "Send Offer Letter Email"}</span>
-                <Send className="w-3.5 h-3.5" />
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveModal(null)}
+                  className="px-4 py-2 rounded-full text-xs text-zinc-400 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendOfferLetter}
+                  disabled={actionLoading || !offerForm.roleCategory || !offerForm.joiningDate}
+                  className="px-6 py-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <span>{actionLoading ? "Sending..." : "Send PDF Offer Letter Email"}</span>
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
