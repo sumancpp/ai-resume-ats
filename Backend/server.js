@@ -224,13 +224,24 @@ app.get("/resumes/:id/file", protect, async (req, res) => {
 
 app.delete("/resumes/:id", protect, async (req, res) => {
     try {
-        const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id })
-        if (!resume) {
+        const deletedResume = await Resume.findOneAndDelete({ _id: req.params.id, user: req.user._id })
+        if (!deletedResume) {
             return res.status(404).json({ success: false, message: "Resume not found" })
         }
-        resume.isDeleted = true
-        await resume.save()
-        res.json({ success: true, message: "Resume deleted and removed from search results successfully." })
+
+        // Clean up local disk file if present
+        if (deletedResume.filePath && !deletedResume.filePath.startsWith("http://") && !deletedResume.filePath.startsWith("https://")) {
+            const localPath = path.resolve(deletedResume.filePath)
+            if (fs.existsSync(localPath)) {
+                try {
+                    fs.unlinkSync(localPath)
+                } catch (unlinkErr) {
+                    console.error("Error unlinking deleted file:", unlinkErr)
+                }
+            }
+        }
+
+        res.json({ success: true, message: "Resume deleted permanently from database." })
     } catch (error) {
         console.error("Delete resume error:", error)
         res.status(500).json({ success: false, message: "Error removing resume" })
@@ -303,10 +314,14 @@ app.post(
                     .update(fileBuffer)
                     .digest("hex")
 
-                // Per-User Duplicate Check
+                // Clean up any legacy soft-deleted resumes for this file
+                await Resume.deleteMany({ user: req.user._id, fileHash, isDeleted: true })
+
+                // Per-User Active Duplicate Check
                 const existingResume = await Resume.findOne({
                     user: req.user._id,
-                    fileHash
+                    fileHash,
+                    isDeleted: { $ne: true }
                 })
 
                 if (existingResume) {
