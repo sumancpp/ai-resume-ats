@@ -35,11 +35,23 @@ const getTransporter = () => {
 }
 
 const sendEmail = async ({ to, subject, html, text }) => {
-    // 1. Resend HTTPS API (Port 443 - Never blocked by Render, Vercel, or Hotspots)
+    // 0. Redirect dummy @example.com email addresses to HR admin email for real inbox delivery
+    let targetEmail = to
+    if (targetEmail.toLowerCase().includes("@example.com") || targetEmail.toLowerCase().endsWith("example.com")) {
+        if (process.env.EMAIL_USER && process.env.EMAIL_USER.includes("@")) {
+            console.log(`[EMAIL ROUTING NOTICE] Redirecting dummy email '${to}' to HR admin email '${process.env.EMAIL_USER.trim()}'...`)
+            targetEmail = process.env.EMAIL_USER.trim()
+        }
+    }
+
+    // 1. Resend HTTPS API (Port 443 - Works seamlessly on Render, Vercel, and Cloud Servers)
     if (process.env.RESEND_API_KEY) {
         try {
-            const resendFrom = process.env.RESEND_FROM || "TalentAI ATS <noreply@sumann.in>"
-            const response = await fetch("https://api.resend.com/emails", {
+            const resendFrom = (process.env.RESEND_FROM && !process.env.RESEND_FROM.includes("sumann.in"))
+                ? process.env.RESEND_FROM
+                : "onboarding@resend.dev"
+
+            let response = await fetch("https://api.resend.com/emails", {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${process.env.RESEND_API_KEY.trim()}`,
@@ -47,18 +59,42 @@ const sendEmail = async ({ to, subject, html, text }) => {
                 },
                 body: JSON.stringify({
                     from: resendFrom,
-                    to: [to],
+                    to: [targetEmail],
                     subject: subject,
                     html: html,
                     text: text
                 })
             })
-            const data = await response.json()
+            let data = await response.json()
             if (response.ok) {
-                console.log(`[RESEND HTTPS API SENT] Verification code emailed to ${to} (ID: ${data.id})`)
+                console.log(`[RESEND HTTPS API SENT] Email successfully dispatched to ${targetEmail} (ID: ${data.id})`)
                 return
             } else {
-                console.warn(`[RESEND API NOTICE]: ${data.message || JSON.stringify(data)}. Trying next transport method...`)
+                console.warn(`[RESEND API NOTICE]: ${data.message || JSON.stringify(data)}.`)
+
+                // If Resend testing restriction triggers, retry to registered HR email
+                if (data.message && data.message.includes("testing email address") && process.env.EMAIL_USER && targetEmail !== process.env.EMAIL_USER.trim()) {
+                    console.log(`[RESEND RETRY] Retrying dispatch to Resend account email '${process.env.EMAIL_USER.trim()}'...`)
+                    response = await fetch("https://api.resend.com/emails", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            from: "onboarding@resend.dev",
+                            to: [process.env.EMAIL_USER.trim()],
+                            subject: `[Candidate: ${to}] ${subject}`,
+                            html: html,
+                            text: text
+                        })
+                    })
+                    data = await response.json()
+                    if (response.ok) {
+                        console.log(`[RESEND HTTPS API SENT TO HR] Email dispatched to ${process.env.EMAIL_USER.trim()} (ID: ${data.id})`)
+                        return
+                    }
+                }
             }
         } catch (resendErr) {
             console.error(`[RESEND FETCH ERROR]: ${resendErr.message}`)
