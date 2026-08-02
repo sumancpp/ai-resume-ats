@@ -34,11 +34,13 @@ import {
 
 import InterviewModal from "../components/InterviewModal"
 import { getBackendUrl } from "../utils/api"
+import { toast } from "react-hot-toast"
 
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`
+pdfjs.GlobalWorkerOptions.standardFontDataUrl = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`
 
 const CandidateDetails = () => {
   const location = useLocation()
@@ -197,10 +199,10 @@ const CandidateDetails = () => {
       })
 
       localStorage.removeItem("talent_ai_candidate_id")
-      alert("Resume removed from database and search results successfully.")
+      toast.success("Resume removed from database permanently.")
       navigate("/")
     } catch (err) {
-      alert("Error deleting resume: " + (err.response?.data?.message || err.message))
+      toast.error("Error deleting resume: " + (err.response?.data?.message || err.message))
     } finally {
       setDeletingResume(false)
     }
@@ -234,11 +236,11 @@ const CandidateDetails = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      alert(res.data.message)
+      toast.success(res.data.message || "Shortlist notice sent successfully!")
       setActiveModal(null)
       setResume((prev) => ({ ...prev, isShortlisted: true, hiringStatus: "shortlisted" }))
     } catch (err) {
-      alert("Error sending shortlist email: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending shortlist email: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }
@@ -264,73 +266,46 @@ const CandidateDetails = () => {
 
       setExamQuestions(res.data.questions || [])
     } catch (err) {
-      alert("Error generating AI exam questions: " + (err.response?.data?.message || err.message))
+      toast.error("Error generating AI exam questions: " + (err.response?.data?.message || err.message))
     } finally {
       setGeneratingAiQuestions(false)
     }
   }
 
   const handleAddCustomMcq = () => {
-    const newMcq = {
-      id: `q_${Date.now()}`,
-      type: "mcq",
-      questionText: "Which of the following is true regarding JavaScript event loops?",
-      options: [
-        "Executes synchronous code first",
-        "Executes microtasks before macrotasks",
-        "Single-threaded non-blocking execution",
-        "All of the above"
-      ],
-      correctOptionIndex: 3
-    }
-    setExamQuestions([...examQuestions, newMcq])
+    setExamQuestions([
+      ...examQuestions,
+      {
+        id: Date.now(),
+        type: "mcq",
+        question: "Custom Technical Question",
+        options: ["Option A", "Option B", "Option C", "Option D"],
+        correctOption: 0
+      }
+    ])
   }
 
   const handleAddCustomCoding = () => {
-    const newCoding = {
-      id: `q_${Date.now()}`,
-      type: "coding",
-      questionText: "Problem: Array Element Sum. Given an array of integers arr, return the sum of all elements.",
-      starterCode: "function solution(arr) {\n  // Write your solution here\n  return 0;\n}",
-      testCases: [
-        { input: "[1, 2, 3, 4]", expectedOutput: "10", description: "Sum positive integers" },
-        { input: "[-5, 5]", expectedOutput: "0", description: "Sum negative and positive" }
-      ]
-    }
-    setExamQuestions([...examQuestions, newCoding])
+    setExamQuestions([
+      ...examQuestions,
+      {
+        id: Date.now(),
+        type: "coding",
+        title: "Algorithmic Challenge",
+        description: "Write a function to solve the problem.",
+        initialCode: "// Write solution here\nfunction solution() {\n\n}",
+        testCases: [{ input: "[1, 2, 3]", expectedOutput: "6" }]
+      }
+    ])
   }
 
-  const handleUpdateQuestionText = (index, text) => {
-    const updated = [...examQuestions]
-    updated[index].questionText = text
-    setExamQuestions(updated)
-  }
-
-  const handleUpdateMcqOption = (qIdx, optIdx, text) => {
-    const updated = [...examQuestions]
-    updated[qIdx].options[optIdx] = text
-    setExamQuestions(updated)
-  }
-
-  const handleUpdateCorrectOption = (qIdx, optIdx) => {
-    const updated = [...examQuestions]
-    updated[qIdx].correctOptionIndex = optIdx
-    setExamQuestions(updated)
-  }
-
-  const handleUpdateCodingStarter = (index, code) => {
-    const updated = [...examQuestions]
-    updated[index].starterCode = code
-    setExamQuestions(updated)
-  }
-
-  const handleDeleteQuestion = (index) => {
+  const handleRemoveQuestion = (index) => {
     setExamQuestions(examQuestions.filter((_, i) => i !== index))
   }
 
   const handleSendConfiguredExam = async () => {
     if (examQuestions.length === 0) {
-      alert("Please generate or add at least 1 question to the exam first.")
+      toast.error("Please generate or add at least 1 question to the exam first.")
       return
     }
 
@@ -351,12 +326,12 @@ const CandidateDetails = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      alert(res.data.message)
+      toast.success(res.data.message || "Configured assessment link emailed!")
       setActiveModal(null)
       setResume((prev) => ({ ...prev, isShortlisted: true, examStatus: "invited", hiringStatus: "exam_invited" }))
       fetchExamData()
     } catch (err) {
-      alert("Error sending configured exam: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending configured exam: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }
@@ -380,12 +355,12 @@ const CandidateDetails = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      alert(res.data.message)
+      toast.success(res.data.message || "Round 1 passed email sent!")
       setActiveModal(null)
       setResume((prev) => ({ ...prev, hiringStatus: "interview_scheduled" }))
       fetchExamData()
     } catch (err) {
-      alert("Error sending Round 1 passed email: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending Round 1 passed email: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }
@@ -409,12 +384,12 @@ const CandidateDetails = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      alert(res.data.message)
+      toast.success(res.data.message || "Video interview invite sent!")
       setActiveModal(null)
       setResume((prev) => ({ ...prev, hiringStatus: "interview_scheduled" }))
       fetchExamData()
     } catch (err) {
-      alert("Error sending video interview invite: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending video interview invite: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }
@@ -439,11 +414,11 @@ const CandidateDetails = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      alert(res.data.message)
+      toast.success(res.data.message || "Offer letter sent successfully!")
       setActiveModal(null)
       setResume((prev) => ({ ...prev, hiringStatus: "hired" }))
     } catch (err) {
-      alert("Error sending offer letter email: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending offer letter email: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }

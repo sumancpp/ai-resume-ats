@@ -43,6 +43,7 @@ import {
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
+import { toast } from "react-hot-toast"
 
 function CustomTooltip({ active, payload, label }) {
   if (active && payload && payload.length) {
@@ -173,7 +174,7 @@ const Dashboard = () => {
     }
 
     if (!candidates || candidates.length === 0) {
-      alert("No candidate dossiers available to send emails.")
+      toast.error("No candidate dossiers available to send emails.")
       return
     }
     setTargetCandidates(candidates)
@@ -207,11 +208,11 @@ const Dashboard = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      alert(res.data.message)
+      toast.success(res.data.message || "Shortlist notice sent successfully!")
       setActiveModal(null)
       fetchDashboardData()
     } catch (err) {
-      alert("Error sending shortlist email: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending shortlist email: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }
@@ -220,12 +221,12 @@ const Dashboard = () => {
   // -------------------------------------------------------------
   // STAGE 2: AI Exam Generation & Custom Question Editor
   // -------------------------------------------------------------
-  const handleGenerateAiQuestions = async (sampleCandidate = null) => {
+  const handleGenerateAiQuestions = async (candidateObj) => {
     try {
       setGeneratingAiQuestions(true)
       const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
       const backendUrl = getBackendUrl()
-      const cand = sampleCandidate || targetCandidates[0]
+      const cand = candidateObj || targetCandidates[0]
 
       const res = await axios.post(
         `${backendUrl}/api/exams/generate-custom-questions`,
@@ -240,7 +241,7 @@ const Dashboard = () => {
 
       setExamQuestions(res.data.questions || [])
     } catch (err) {
-      alert("Error generating AI exam questions: " + (err.response?.data?.message || err.message))
+      toast.error("Error generating AI exam questions: " + (err.response?.data?.message || err.message))
     } finally {
       setGeneratingAiQuestions(false)
     }
@@ -306,7 +307,7 @@ const Dashboard = () => {
 
   const handleSendConfiguredExam = async () => {
     if (examQuestions.length === 0) {
-      alert("Please generate or add at least 1 question to the exam first.")
+      toast.error("Please generate or add at least 1 question to the exam first.")
       return
     }
 
@@ -327,11 +328,11 @@ const Dashboard = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      alert(res.data.message)
+      toast.success(res.data.message || "Configured assessment link emailed!")
       setActiveModal(null)
       fetchDashboardData()
     } catch (err) {
-      alert("Error sending configured exam: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending configured exam: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }
@@ -358,11 +359,11 @@ const Dashboard = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      alert(res.data.message)
+      toast.success(res.data.message || "Round 1 passed email sent!")
       setActiveModal(null)
       fetchDashboardData()
     } catch (err) {
-      alert("Error sending Round 1 passed email: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending Round 1 passed email: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }
@@ -392,11 +393,11 @@ const Dashboard = () => {
         sent++
       }
 
-      alert(`Successfully sent Jitsi Meet video interview join link email to ${sent} candidate(s)!`)
+      toast.success(`Successfully sent video interview join link to ${sent} candidate(s)!`)
       setActiveModal(null)
       fetchDashboardData()
     } catch (err) {
-      alert("Error sending video interview invite: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending video interview invite: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }
@@ -424,11 +425,11 @@ const Dashboard = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      alert(res.data.message)
+      toast.success(res.data.message || "Offer letter sent successfully!")
       setActiveModal(null)
       fetchDashboardData()
     } catch (err) {
-      alert("Error sending offer letter email: " + (err.response?.data?.message || err.message))
+      toast.error("Error sending offer letter email: " + (err.response?.data?.message || err.message))
     } finally {
       setActionLoading(false)
     }
@@ -708,7 +709,7 @@ const Dashboard = () => {
 
           {chartData.length > 0 ? (
             <div className="w-full h-[360px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
                 <BarChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 20 }}>
                   <defs>
                     <linearGradient id="skillBarGradient" x1="0" y1="0" x2="0" y2="1">

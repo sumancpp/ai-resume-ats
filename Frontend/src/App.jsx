@@ -4,6 +4,7 @@ import {
   Route,
   useLocation
 } from "react-router-dom"
+import { Toaster } from "react-hot-toast"
 
 import SearchResume from "./components/SearchResume"
 import CandidateDetails from "./pages/CandidateDetails"
@@ -90,6 +91,31 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: "#16171B",
+            color: "#F9F8F6",
+            border: "1px solid #272930",
+            borderRadius: "16px",
+            fontSize: "13px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5)"
+          },
+          success: {
+            iconTheme: {
+              primary: "#10B981",
+              secondary: "#16171B"
+            }
+          },
+          error: {
+            iconTheme: {
+              primary: "#EF4444",
+              secondary: "#16171B"
+            }
+          }
+        }}
+      />
       <AppContent />
     </BrowserRouter>
   )

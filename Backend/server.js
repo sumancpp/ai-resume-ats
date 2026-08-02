@@ -425,10 +425,16 @@ ${text}
 `
                 let summary = ""
                 try {
-                    const summaryResult = await geminiModel.generateContent(summaryPrompt)
+                    const summaryPromise = geminiModel.generateContent(summaryPrompt)
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error("Gemini Timeout")), 2000)
+                    )
+                    const summaryResult = await Promise.race([summaryPromise, timeoutPromise])
                     summary = summaryResult.response.text().trim()
                 } catch (aiError) {
-                    summary = "Professional candidate profile."
+                    summary = extractedSkills.length > 0
+                        ? `Experienced profile with technical skills in ${extractedSkills.slice(0, 5).join(", ")}.`
+                        : "Professional candidate profile."
                 }
 
                 // Cloudinary upload (falls back to disk if Cloudinary credentials are not set)

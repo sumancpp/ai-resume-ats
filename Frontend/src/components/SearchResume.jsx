@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
+import { toast } from "react-hot-toast"
 
 const SearchResume = () => {
   const { token, user } = useAuth()
@@ -110,8 +111,9 @@ const SearchResume = () => {
       await axios.delete(getApiUrl(`/resumes/${resumeId}`), { headers })
       setResumes((prev) => prev.filter((r) => r._id !== resumeId))
       setRefreshFolderKey((k) => k + 1)
+      toast.success("Resume deleted permanently.")
     } catch (err) {
-      alert("Error deleting resume: " + (err.response?.data?.message || err.message))
+      toast.error("Error deleting resume: " + (err.response?.data?.message || err.message))
     }
   }
 
@@ -192,7 +194,7 @@ const SearchResume = () => {
     }
 
     if (files.length === 0) {
-      alert("Please select or drop valid PDF/DOCX resumes first.")
+      toast.error("Please select or drop valid PDF/DOCX resumes first.")
       return
     }
 

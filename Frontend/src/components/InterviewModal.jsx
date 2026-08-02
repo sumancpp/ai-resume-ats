@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
+import { toast } from "react-hot-toast"
 
 export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpdate }) {
     const [cameraActive, setCameraActive] = useState(false)
@@ -84,7 +85,7 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
             if (onUpdate) onUpdate()
             onClose()
         } catch (err) {
-            alert("Error updating interview status: " + (err.response?.data?.message || err.message))
+            toast.error("Error updating interview status: " + (err.response?.data?.message || err.message))
         } finally {
             setSubmitting(false)
         }
@@ -105,11 +106,11 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                 }
             )
 
-            alert(res.data.message || "Selection email sent successfully!")
+            toast.success(res.data.message || "Selection email sent successfully!")
             if (onUpdate) onUpdate()
             onClose()
         } catch (err) {
-            alert("Error sending confirmation email: " + (err.response?.data?.message || err.message))
+            toast.error("Error sending confirmation email: " + (err.response?.data?.message || err.message))
         } finally {
             setSubmitting(false)
         }
@@ -236,7 +237,7 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                                 <button
                                     onClick={() => {
                                         navigator.clipboard.writeText(meetLink)
-                                        alert("Google Meet link copied to clipboard!")
+                                        toast.success("Google Meet link copied to clipboard!")
                                     }}
                                     className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] cursor-pointer flex items-center gap-1"
                                 >

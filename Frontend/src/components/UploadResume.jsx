@@ -1,5 +1,6 @@
 import { useState } from "react"
 import axios from "axios"
+import { toast } from "react-hot-toast"
 
 const UploadResume = () => {
 
@@ -9,7 +10,7 @@ const UploadResume = () => {
     const handleUpload = async () => {
 
         if (!file) {
-            alert("Please select file")
+            toast.error("Please select a file")
             return
         }
 
@@ -29,7 +30,7 @@ const UploadResume = () => {
 
             console.log(response.data)
 
-            alert("Resume uploaded successfully")
+            toast.success("Resume uploaded successfully")
 
             setFile(null)
 
@@ -37,7 +38,7 @@ const UploadResume = () => {
 
             console.log(error)
 
-            alert("Upload failed")
+            toast.error("Upload failed")
         } finally {
             setLoading(false)
         }

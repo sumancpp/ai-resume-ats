@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
+import { toast } from "react-hot-toast"
 
 export default function TakeExam() {
     const { token } = useParams()
@@ -105,7 +106,7 @@ export default function TakeExam() {
             if (err.response?.status === 410 || err.response?.data?.isExpired) {
                 setExpired(true)
             } else {
-                alert(err.response?.data?.message || "Invalid exam access link.")
+                toast.error(err.response?.data?.message || "Invalid exam access link.")
             }
         } finally {
             setLoading(false)
@@ -118,8 +119,9 @@ export default function TakeExam() {
             await axios.post(`${backendUrl}/api/exams/start/${token}`)
             setExamStarted(true)
             setTimeLeft(600)
+            toast.success("Exam started! Good luck.")
         } catch (err) {
-            alert("Error starting exam: " + (err.response?.data?.message || err.message))
+            toast.error("Error starting exam: " + (err.response?.data?.message || err.message))
         }
     }
 
@@ -178,8 +180,9 @@ export default function TakeExam() {
                 ...prev,
                 [question.id]: res.data.testResults
             }))
+            toast.success("Code tests executed successfully!")
         } catch (err) {
-            alert("Code execution error: " + (err.response?.data?.message || err.message))
+            toast.error("Code execution error: " + (err.response?.data?.message || err.message))
         } finally {
             setRunningCode(false)
         }
@@ -209,8 +212,9 @@ export default function TakeExam() {
             setCompleted(true)
             setSubmittedScore(res.data.score)
             setSubmittedFeedback(res.data.aiFeedback)
+            toast.success("Exam submitted successfully!")
         } catch (err) {
-            alert("Submission error: " + (err.response?.data?.message || err.message))
+            toast.error("Submission error: " + (err.response?.data?.message || err.message))
         } finally {
             setSubmitting(false)
         }
