@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
 import {
@@ -13,7 +13,9 @@ import {
     ShieldAlert,
     Check,
     FileCode,
-    Award
+    Award,
+    Camera,
+    Video
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
@@ -50,19 +52,44 @@ export default function TakeExam() {
     const [strikes, setStrikes] = useState(0)
     const [isFullscreen, setIsFullscreen] = useState(false)
 
-    // Helper to send proctoring logs to backend
-    const logProctoringEvent = async (eventType, details) => {
+    // Phase 3: WebCam & Audio AI Proctoring State
+    const videoRef = useRef(null)
+    const canvasRef = useRef(null)
+    const [isWebcamActive, setIsWebcamActive] = useState(false)
+    const [webcamError, setWebcamError] = useState("")
+
+    // Helper to send proctoring logs & snapshots to backend
+    const logProctoringEvent = async (eventType, details, imageData = null) => {
         try {
             const backendUrl = getBackendUrl()
-            const res = await axios.post(`${backendUrl}/api/exams/proctoring-log/${token}`, {
-                eventType,
-                details
-            })
+            const payload = { eventType, details }
+            if (imageData) payload.imageData = imageData
+
+            const res = await axios.post(`${backendUrl}/api/exams/proctoring-log/${token}`, payload)
             if (res.data?.integrityScore !== undefined) {
                 setIntegrityScore(res.data.integrityScore)
             }
         } catch (err) {
             console.error("Failed to log proctoring event:", err)
+        }
+    }
+
+    // Capture WebCam Snapshot
+    const captureProctorSnapshot = (reason = "Periodic AI Proctor Snapshot") => {
+        if (!videoRef.current || !canvasRef.current || !isWebcamActive) return
+        try {
+            const video = videoRef.current
+            const canvas = canvasRef.current
+            const ctx = canvas.getContext("2d")
+            if (video.videoWidth && video.videoHeight) {
+                canvas.width = 320
+                canvas.height = 240
+                ctx.drawImage(video, 0, 0, 320, 240)
+                const imageDataUrl = canvas.toDataURL("image/jpeg", 0.4)
+                logProctoringEvent("WEBCAM_SNAPSHOT", reason, imageDataUrl)
+            }
+        } catch (err) {
+            console.error("Snapshot capture error:", err)
         }
     }
 
@@ -215,6 +242,15 @@ export default function TakeExam() {
         }
     }
 
+    // Periodic WebCam AI Proctor Snapshot interval (Every 45 seconds)
+    useEffect(() => {
+        if (!examStarted || completed || submitting || !isWebcamActive) return
+        const interval = setInterval(() => {
+            captureProctorSnapshot("Periodic AI Proctor Audit")
+        }, 45000)
+        return () => clearInterval(interval)
+    }, [examStarted, completed, submitting, isWebcamActive])
+
     const requestFullscreenMode = async () => {
         try {
             const element = document.documentElement
@@ -227,9 +263,31 @@ export default function TakeExam() {
         }
     }
 
+    const initWebcam = async () => {
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 320 }, height: { ideal: 240 } },
+                    audio: false
+                })
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream
+                }
+                setIsWebcamActive(true)
+                toast.success("🔴 Live AI Video Proctor activated successfully.")
+            }
+        } catch (err) {
+            console.warn("Webcam access error:", err)
+            setWebcamError("Camera access denied or unreadable.")
+            toast.error("⚠️ Camera permission required for proctored assessment.", { duration: 5000 })
+            logProctoringEvent("WEBCAM_DENIED", "Candidate camera permission was denied or unreadable")
+        }
+    }
+
     const startExamNow = async () => {
         try {
             await requestFullscreenMode()
+            await initWebcam()
             const backendUrl = getBackendUrl()
             await axios.post(`${backendUrl}/api/exams/start/${token}`)
             setExamStarted(true)
@@ -645,6 +703,35 @@ export default function TakeExam() {
                     </div>
                 </main>
             </div>
+
+            {/* FLOATING LIVE WEBCAM PROCTOR OVERLAY & HIDDEN SNAPSHOT CANVAS */}
+            <canvas ref={canvasRef} className="hidden" />
+
+            {examStarted && !completed && (
+                <div className="fixed bottom-4 right-4 z-50 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2.5 shadow-2xl flex flex-col items-center space-y-1.5 w-44">
+                    <div className="flex items-center justify-between w-full px-1 text-[10px] font-mono font-bold">
+                        <div className="flex items-center gap-1.5 text-emerald-400">
+                            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                            <span>AI Proctor</span>
+                        </div>
+                        <Camera className="w-3.5 h-3.5 text-indigo-400" />
+                    </div>
+                    <div className="w-full h-28 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 relative flex items-center justify-center">
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="w-full h-full object-cover"
+                        />
+                        {!isWebcamActive && (
+                            <span className="text-[10px] text-rose-400 text-center px-2 font-mono">
+                                Camera Inactive
+                            </span>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

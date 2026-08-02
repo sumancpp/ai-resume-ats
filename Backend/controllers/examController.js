@@ -881,7 +881,7 @@ export const sendOfferLetter = async (req, res) => {
 export const logProctoringEvent = async (req, res) => {
     try {
         const { token } = req.params
-        const { eventType, details } = req.body
+        const { eventType, details, imageData } = req.body
 
         if (!eventType) {
             return res.status(400).json({ success: false, message: "eventType is required" })
@@ -903,6 +903,17 @@ export const logProctoringEvent = async (req, res) => {
             exam.pasteCount = (exam.pasteCount || 0) + 1
         } else if (eventType === "EXIT_FULLSCREEN") {
             exam.fullscreenExitCount = (exam.fullscreenExitCount || 0) + 1
+        } else if (eventType === "WEBCAM_VIOLATION" || eventType === "FACE_NOT_DETECTED") {
+            exam.webcamViolationCount = (exam.webcamViolationCount || 0) + 1
+        }
+
+        // Save webcam image snapshot if provided
+        if (imageData && typeof imageData === "string") {
+            exam.proctoringSnapshots.push({
+                timestamp: new Date(),
+                imageData,
+                flagReason: details || eventType
+            })
         }
 
         // Push log entry
@@ -916,10 +927,11 @@ export const logProctoringEvent = async (req, res) => {
         const tabPenalty = (exam.tabSwitchCount || 0) * 10
         const pastePenalty = (exam.pasteCount || 0) * 15
         const fsPenalty = (exam.fullscreenExitCount || 0) * 15
+        const webcamPenalty = (exam.webcamViolationCount || 0) * 15
         const otherLogsCount = exam.proctoringLogs.filter(l => ["RIGHT_CLICK", "RESTRICTED_KEY", "COPY_ATTEMPT"].includes(l.eventType)).length
         const otherPenalty = otherLogsCount * 5
 
-        const totalDeduction = tabPenalty + pastePenalty + fsPenalty + otherPenalty
+        const totalDeduction = tabPenalty + pastePenalty + fsPenalty + webcamPenalty + otherPenalty
         exam.integrityScore = Math.max(0, 100 - totalDeduction)
 
         await exam.save()

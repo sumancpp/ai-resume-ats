@@ -122,6 +122,17 @@ const examSchema = new mongoose.Schema({
             details: { type: String, default: "" }
         }
     ],
+    webcamViolationCount: {
+        type: Number,
+        default: 0
+    },
+    proctoringSnapshots: [
+        {
+            timestamp: { type: Date, default: Date.now },
+            imageData: { type: String, required: true },
+            flagReason: { type: String, default: "Periodic Snapshot" }
+        }
+    ],
     interviewStatus: {
         type: String,
         enum: ["none", "scheduled", "invited", "passed", "failed"],

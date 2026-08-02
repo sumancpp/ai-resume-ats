@@ -31,7 +31,8 @@ import {
   ZoomOut,
   RotateCcw,
   ShieldAlert,
-  AlertTriangle
+  AlertTriangle,
+  Camera
 } from "lucide-react"
 
 import InterviewModal from "../components/InterviewModal"
@@ -67,6 +68,7 @@ const CandidateDetails = () => {
   const [actionLoading, setActionLoading] = useState(false)
   const [deletingResume, setDeletingResume] = useState(false)
   const [examData, setExamData] = useState(null)
+  const [selectedSnapshot, setSelectedSnapshot] = useState(null)
   const [isInterviewOpen, setIsInterviewOpen] = useState(false)
 
   // 5 STAGE ACTION MODAL STATES
@@ -769,6 +771,43 @@ const CandidateDetails = () => {
                               "{sub.aiAnalysis}"
                             </p>
                           )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* WEBCAM AI PROCTOR SNAPSHOTS GALLERY CARD */}
+                {examData?.proctoringSnapshots && examData.proctoringSnapshots.length > 0 && (
+                  <div className="bg-[#141519] border border-cyan-500/30 rounded-xl p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-cyan-400" />
+                        <span className="text-xs font-mono font-bold uppercase text-cyan-300">Webcam AI Proctor Snapshots</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                        {examData.proctoringSnapshots.length} Captured
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {examData.proctoringSnapshots.map((snap, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => setSelectedSnapshot(snap)}
+                          className="bg-[#1A1B20] border border-[#272930] hover:border-cyan-500/50 rounded-lg p-1 space-y-1 cursor-pointer transition-all group overflow-hidden"
+                        >
+                          <div className="aspect-video bg-black rounded overflow-hidden relative">
+                            <img
+                              src={snap.imageData}
+                              alt={`Proctor Snapshot ${idx + 1}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-all"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400 px-0.5">
+                            <span>#{idx + 1}</span>
+                            <span>{new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1639,6 +1678,45 @@ const CandidateDetails = () => {
                 <span>{actionLoading ? "Sending..." : "Send Offer Letter Email"}</span>
                 <Send className="w-3.5 h-3.5" />
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WEBCAM PROCTOR SNAPSHOT MODAL */}
+      {selectedSnapshot && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#141519] border border-cyan-500/40 rounded-2xl p-5 max-w-lg w-full space-y-4 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-[#272930] pb-3">
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-sm font-mono font-bold text-white uppercase">Proctor Webcam Capture</h3>
+              </div>
+              <button
+                onClick={() => setSelectedSnapshot(null)}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="aspect-video bg-black rounded-xl overflow-hidden border border-[#272930] relative">
+              <img
+                src={selectedSnapshot.imageData}
+                alt="Webcam Proctor Full Snapshot"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-mono bg-[#1A1B20] p-3 rounded-xl border border-[#272930]">
+              <div className="space-y-0.5">
+                <span className="text-zinc-400 block text-[10px]">Reason:</span>
+                <span className="text-cyan-300 font-semibold">{selectedSnapshot.flagReason || "Periodic AI Proctor Snapshot"}</span>
+              </div>
+              <div className="text-right space-y-0.5">
+                <span className="text-zinc-400 block text-[10px]">Timestamp:</span>
+                <span className="text-zinc-200 font-medium">{new Date(selectedSnapshot.timestamp).toLocaleString()}</span>
+              </div>
             </div>
           </div>
         </div>
