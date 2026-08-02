@@ -350,33 +350,53 @@ const CandidateDetails = () => {
   }
 
   const handleAddCustomMcq = () => {
-    setExamQuestions([
-      ...examQuestions,
-      {
-        id: Date.now(),
-        type: "mcq",
-        question: "Custom Technical Question",
-        options: ["Option A", "Option B", "Option C", "Option D"],
-        correctOption: 0
-      }
-    ])
+    const newMcq = {
+      id: `q_${Date.now()}`,
+      type: "mcq",
+      questionText: "Custom Technical Question",
+      options: ["Option A", "Option B", "Option C", "Option D"],
+      correctOptionIndex: 0
+    }
+    setExamQuestions([...examQuestions, newMcq])
   }
 
   const handleAddCustomCoding = () => {
-    setExamQuestions([
-      ...examQuestions,
-      {
-        id: Date.now(),
-        type: "coding",
-        title: "Algorithmic Challenge",
-        description: "Write a function to solve the problem.",
-        initialCode: "// Write solution here\nfunction solution() {\n\n}",
-        testCases: [{ input: "[1, 2, 3]", expectedOutput: "6" }]
-      }
-    ])
+    const newCoding = {
+      id: `q_${Date.now()}`,
+      type: "coding",
+      questionText: "Problem: Algorithmic Challenge. Write a function to solve the problem.",
+      starterCode: "function solution(arr) {\n  // Write solution here\n  return arr;\n}",
+      testCases: [{ input: "[1, 2, 3]", expectedOutput: "6", description: "Basic test case" }]
+    }
+    setExamQuestions([...examQuestions, newCoding])
   }
 
-  const handleRemoveQuestion = (index) => {
+  const handleUpdateQuestionText = (index, text) => {
+    const updated = [...examQuestions]
+    updated[index].questionText = text
+    setExamQuestions(updated)
+  }
+
+  const handleUpdateMcqOption = (qIdx, optIdx, text) => {
+    const updated = [...examQuestions]
+    if (!updated[qIdx].options) updated[qIdx].options = ["", "", "", ""]
+    updated[qIdx].options[optIdx] = text
+    setExamQuestions(updated)
+  }
+
+  const handleUpdateCorrectOption = (qIdx, optIdx) => {
+    const updated = [...examQuestions]
+    updated[qIdx].correctOptionIndex = optIdx
+    setExamQuestions(updated)
+  }
+
+  const handleUpdateCodingStarter = (index, code) => {
+    const updated = [...examQuestions]
+    updated[index].starterCode = code
+    setExamQuestions(updated)
+  }
+
+  const handleDeleteQuestion = (index) => {
     setExamQuestions(examQuestions.filter((_, i) => i !== index))
   }
 
