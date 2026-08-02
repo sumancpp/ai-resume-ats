@@ -843,8 +843,8 @@ const SearchResume = () => {
 
                         {/* Score Pill & Delete Action */}
                         <div className="flex items-center gap-2 shrink-0">
-                          <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
-                            {resume.score ? `${resume.score}` : "N/A"}
+                          <div className={`px-3 py-1 rounded-full font-mono text-xs font-bold ${resume.score ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400" : "bg-violet-500/10 border border-violet-500/20 text-violet-300"}`}>
+                            {resume.score ? `${resume.score} Match` : "Verified"}
                           </div>
                           <button
                             onClick={(e) => handleDeleteResume(e, resume._id)}

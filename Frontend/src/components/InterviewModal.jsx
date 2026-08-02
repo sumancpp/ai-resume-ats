@@ -192,7 +192,7 @@ export default function InterviewModal({ isOpen, onClose, candidate, exam, onUpd
                             <Award className="w-7 h-7 text-indigo-400" />
                             <div>
                                 <span className="text-[11px] text-slate-400 block font-semibold uppercase">Exam Score</span>
-                                <span className="text-base font-bold text-white">{exam?.score ?? "N/A"}%</span>
+                                <span className="text-base font-bold text-white">{typeof exam?.score === "number" ? `${exam.score}%` : "Pending / Not Taken"}</span>
                             </div>
                         </div>
 
