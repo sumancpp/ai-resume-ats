@@ -558,24 +558,53 @@ export default function TakeExam() {
             {/* Main Area */}
             <div className="flex-1 flex flex-col lg:flex-row max-w-7xl w-full mx-auto p-4 sm:p-6 gap-6">
                 {/* Left Navigation Panel */}
-                <aside className="w-full lg:w-64 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
-                    <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Questions ({questions.length})</h4>
-                        <div className="grid grid-cols-5 sm:grid-cols-10 lg:grid-cols-2 gap-2">
-                            {questions.map((q, idx) => {
-                                const isAnswered = q.type === "mcq" ? answers[q.id] !== undefined : !!codeSubmissions[q.id]
-                                return (
-                                    <button
-                                        key={q.id}
-                                        onClick={() => setCurrentQIndex(idx)}
-                                        className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-between border transition-all cursor-pointer ${idx === currentQIndex ? "bg-indigo-600 text-white border-indigo-400" : isAnswered ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-slate-800 text-slate-400 border-slate-700"}`}
-                                    >
-                                        <span>Q{idx + 1}</span>
-                                        <span className="text-[10px] opacity-75 hidden lg:inline">{q.type.toUpperCase()}</span>
-                                    </button>
-                                )
-                            })}
+                <aside className="w-full lg:w-64 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-6">
+                    <div className="space-y-6">
+                        <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Questions ({questions.length})</h4>
+                            <div className="grid grid-cols-5 sm:grid-cols-10 lg:grid-cols-2 gap-2">
+                                {questions.map((q, idx) => {
+                                    const isAnswered = q.type === "mcq" ? answers[q.id] !== undefined : !!codeSubmissions[q.id]
+                                    return (
+                                        <button
+                                            key={q.id}
+                                            onClick={() => setCurrentQIndex(idx)}
+                                            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-between border transition-all cursor-pointer ${idx === currentQIndex ? "bg-indigo-600 text-white border-indigo-400" : isAnswered ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-slate-800 text-slate-400 border-slate-700"}`}
+                                        >
+                                            <span>Q{idx + 1}</span>
+                                            <span className="text-[10px] opacity-75 hidden lg:inline">{q.type.toUpperCase()}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
                         </div>
+
+                        {/* EMBEDDED LIVE WEBCAM AI PROCTOR MONITOR */}
+                        {examStarted && !completed && (
+                            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center space-y-2 w-full">
+                                <div className="flex items-center justify-between w-full px-1 text-[10px] font-mono font-bold">
+                                    <div className="flex items-center gap-1.5 text-emerald-400">
+                                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                                        <span>AI Proctor</span>
+                                    </div>
+                                    <Camera className="w-3.5 h-3.5 text-indigo-400" />
+                                </div>
+                                <div className="w-full h-28 bg-slate-900 rounded-lg overflow-hidden border border-slate-800 relative flex items-center justify-center">
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className="w-full h-full object-cover"
+                                    />
+                                    {!isWebcamActive && (
+                                        <span className="text-[10px] text-rose-400 text-center px-2 font-mono">
+                                            Camera Inactive
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <button
@@ -739,34 +768,8 @@ export default function TakeExam() {
                 </main>
             </div>
 
-            {/* FLOATING LIVE WEBCAM PROCTOR OVERLAY & HIDDEN SNAPSHOT CANVAS */}
+            {/* HIDDEN SNAPSHOT CANVAS */}
             <canvas ref={canvasRef} className="hidden" />
-
-            {examStarted && !completed && (
-                <div className="fixed bottom-4 right-4 z-50 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2.5 shadow-2xl flex flex-col items-center space-y-1.5 w-44">
-                    <div className="flex items-center justify-between w-full px-1 text-[10px] font-mono font-bold">
-                        <div className="flex items-center gap-1.5 text-emerald-400">
-                            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                            <span>AI Proctor</span>
-                        </div>
-                        <Camera className="w-3.5 h-3.5 text-indigo-400" />
-                    </div>
-                    <div className="w-full h-28 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 relative flex items-center justify-center">
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            muted
-                            className="w-full h-full object-cover"
-                        />
-                        {!isWebcamActive && (
-                            <span className="text-[10px] text-rose-400 text-center px-2 font-mono">
-                                Camera Inactive
-                            </span>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     )
 }
