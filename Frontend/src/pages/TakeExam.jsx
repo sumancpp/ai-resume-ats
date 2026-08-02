@@ -45,6 +45,108 @@ export default function TakeExam() {
     // Countdown Timer (10 minutes = 600 seconds)
     const [timeLeft, setTimeLeft] = useState(600)
 
+    // Anti-Cheating & Proctoring State
+    const [integrityScore, setIntegrityScore] = useState(100)
+    const [strikes, setStrikes] = useState(0)
+    const [isFullscreen, setIsFullscreen] = useState(false)
+
+    // Helper to send proctoring logs to backend
+    const logProctoringEvent = async (eventType, details) => {
+        try {
+            const backendUrl = getBackendUrl()
+            const res = await axios.post(`${backendUrl}/api/exams/proctoring-log/${token}`, {
+                eventType,
+                details
+            })
+            if (res.data?.integrityScore !== undefined) {
+                setIntegrityScore(res.data.integrityScore)
+            }
+        } catch (err) {
+            console.error("Failed to log proctoring event:", err)
+        }
+    }
+
+    // Attach security lockdown event listeners when exam is active
+    useEffect(() => {
+        if (!examStarted || completed || submitting) return
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                setStrikes((prev) => prev + 1)
+                toast.error("⚠️ Security Warning: Tab switch / background window detected! Event logged.", { duration: 4000 })
+                logProctoringEvent("TAB_SWITCH", "Candidate switched tab or minimized window")
+            }
+        }
+
+        const handleWindowBlur = () => {
+            toast.error("⚠️ Security Warning: Exam window lost focus!", { duration: 3000 })
+            logProctoringEvent("WINDOW_BLUR", "Candidate window focus lost")
+        }
+
+        const handleFullscreenChange = () => {
+            const isFull = !!document.fullscreenElement
+            setIsFullscreen(isFull)
+            if (!isFull) {
+                setStrikes((prev) => prev + 1)
+                toast.error("⚠️ Fullscreen exited! Please click re-enter fullscreen immediately.", { duration: 5000 })
+                logProctoringEvent("EXIT_FULLSCREEN", "Candidate exited full screen mode")
+            }
+        }
+
+        const handleContextMenu = (e) => {
+            e.preventDefault()
+            toast.error("🚫 Security Policy: Right-click menu is disabled during the exam.")
+            logProctoringEvent("RIGHT_CLICK", "Attempted context menu right-click")
+        }
+
+        const handleCopy = (e) => {
+            e.preventDefault()
+            toast.error("🚫 Security Policy: Copying text is disabled during the exam.")
+            logProctoringEvent("COPY_ATTEMPT", "Attempted text copy")
+        }
+
+        const handlePaste = (e) => {
+            e.preventDefault()
+            toast.error("🚫 Security Policy: Direct copy-pasting is disabled to ensure exam integrity.")
+            logProctoringEvent("PASTE_ATTEMPT", "Attempted text paste")
+        }
+
+        const handleKeyDown = (e) => {
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey
+            const key = e.key.toLowerCase()
+
+            if (
+                e.key === "F12" ||
+                (isCtrlOrCmd && (key === "c" || key === "v" || key === "u" || key === "a")) ||
+                (isCtrlOrCmd && e.shiftKey && (key === "i" || key === "j" || key === "c"))
+            ) {
+                e.preventDefault()
+                toast.error(`🚫 Security Policy: Shortcut '${e.key}' is disabled during assessment.`)
+                logProctoringEvent("RESTRICTED_KEY", `Attempted key shortcut: ${e.key}`)
+            }
+        }
+
+        document.addEventListener("visibilitychange", handleVisibilityChange)
+        window.addEventListener("blur", handleWindowBlur)
+        document.addEventListener("fullscreenchange", handleFullscreenChange)
+        document.addEventListener("contextmenu", handleContextMenu)
+        document.addEventListener("copy", handleCopy)
+        document.addEventListener("cut", handleCopy)
+        document.addEventListener("paste", handlePaste)
+        window.addEventListener("keydown", handleKeyDown)
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange)
+            window.removeEventListener("blur", handleWindowBlur)
+            document.removeEventListener("fullscreenchange", handleFullscreenChange)
+            document.removeEventListener("contextmenu", handleContextMenu)
+            document.removeEventListener("copy", handleCopy)
+            document.removeEventListener("cut", handleCopy)
+            document.removeEventListener("paste", handlePaste)
+            window.removeEventListener("keydown", handleKeyDown)
+        }
+    }, [examStarted, completed, submitting])
+
     useEffect(() => {
         verifyToken()
     }, [token])
@@ -113,13 +215,26 @@ export default function TakeExam() {
         }
     }
 
+    const requestFullscreenMode = async () => {
+        try {
+            const element = document.documentElement
+            if (element.requestFullscreen) {
+                await element.requestFullscreen().catch(() => {})
+            }
+            setIsFullscreen(true)
+        } catch (err) {
+            console.error("Fullscreen error:", err)
+        }
+    }
+
     const startExamNow = async () => {
         try {
+            await requestFullscreenMode()
             const backendUrl = getBackendUrl()
             await axios.post(`${backendUrl}/api/exams/start/${token}`)
             setExamStarted(true)
             setTimeLeft(600)
-            toast.success("Exam started! Good luck.")
+            toast.success("Exam started under secure proctored environment!")
         } catch (err) {
             toast.error("Error starting exam: " + (err.response?.data?.message || err.message))
         }
@@ -313,11 +428,12 @@ export default function TakeExam() {
                     <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-8 space-y-4 text-sm text-slate-300">
                         <h3 className="text-white font-semibold text-base flex items-center gap-2">
                             <AlertCircle className="w-5 h-5 text-amber-400" />
-                            Important Assessment Rules:
+                            Important Assessment & Security Rules:
                         </h3>
                         <ul className="space-y-2 list-disc list-inside text-slate-300">
                             <li><strong>Time Limit:</strong> You have exactly <strong>10 minutes</strong> to complete all questions.</li>
-                            <li><strong>Question Types:</strong> Includes Technical MCQs and Live Code Challenges.</li>
+                            <li><strong>Proctored Environment:</strong> Fullscreen mode is <strong>mandatory</strong>. Tab switching, losing window focus, or exiting full screen will be flagged.</li>
+                            <li><strong>Security Lockdown:</strong> Copying text, pasting code, right-clicking, and developer console shortcuts are disabled.</li>
                             <li><strong>Code Testing:</strong> You can test your code against sample test cases using the <em>Run Test Cases</em> button before submitting.</li>
                             <li><strong>Automatic Submission:</strong> The exam will auto-submit when the countdown hits zero.</li>
                         </ul>
@@ -328,7 +444,7 @@ export default function TakeExam() {
                         className="w-full py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-3 transition-all transform active:scale-95 cursor-pointer text-lg"
                     >
                         <Play className="w-5 h-5 fill-current" />
-                        Start 10-Minute Assessment Now
+                        Enter Secure Fullscreen & Start Exam
                     </button>
                 </div>
             </div>
@@ -339,7 +455,23 @@ export default function TakeExam() {
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-            {/* Top Bar with Timer */}
+            {/* Fullscreen Exit Warning Banner */}
+            {!isFullscreen && examStarted && !completed && (
+                <div className="bg-rose-600 text-white text-xs sm:text-sm px-4 py-2.5 flex items-center justify-between font-medium shadow-lg z-50">
+                    <div className="flex items-center gap-2">
+                        <ShieldAlert className="w-5 h-5 animate-bounce" />
+                        <span><strong>Security Alert:</strong> Fullscreen mode exited! Re-enter fullscreen immediately to avoid strike penalties.</span>
+                    </div>
+                    <button
+                        onClick={requestFullscreenMode}
+                        className="px-3 py-1 bg-white text-rose-700 font-bold rounded-lg hover:bg-slate-100 transition-all cursor-pointer text-xs"
+                    >
+                        Re-Enter Fullscreen
+                    </button>
+                </div>
+            )}
+
+            {/* Top Bar with Timer & Anti-Cheat Badge */}
             <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xl">
                 <div className="flex items-center gap-2 sm:gap-3">
                     <span className="font-extrabold text-base sm:text-lg text-white tracking-tight">TalentAI Assessment</span>
@@ -348,10 +480,19 @@ export default function TakeExam() {
                     </span>
                 </div>
 
-                {/* Timer Badge */}
-                <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-mono text-base sm:text-lg font-bold border transition-colors ${timeLeft < 120 ? "bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse" : "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"}`}>
-                    <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span>{formatTime(timeLeft)}</span>
+                <div className="flex items-center gap-3">
+                    {/* Integrity & Proctoring Trust Badge */}
+                    <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold ${integrityScore >= 90 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : integrityScore >= 70 ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-rose-500/10 text-rose-400 border-rose-500/30"}`}>
+                        <ShieldAlert className="w-4 h-4" />
+                        <span>Trust Score: {integrityScore}%</span>
+                        {strikes > 0 && <span className="bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded text-[10px]">Strikes: {strikes}</span>}
+                    </div>
+
+                    {/* Timer Badge */}
+                    <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-mono text-base sm:text-lg font-bold border transition-colors ${timeLeft < 120 ? "bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse" : "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"}`}>
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span>{formatTime(timeLeft)}</span>
+                    </div>
                 </div>
             </header>
 

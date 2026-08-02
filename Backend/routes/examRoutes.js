@@ -18,7 +18,8 @@ import {
     sendConfiguredExam,
     sendShortlistNotice,
     sendRound1Passed,
-    sendOfferLetter
+    sendOfferLetter,
+    logProctoringEvent
 } from "../controllers/examController.js"
 
 const router = express.Router()
@@ -30,6 +31,7 @@ router.get("/verify/:token", verifyExamToken)
 router.post("/start/:token", startExam)
 router.post("/run-code", runCodeTest)
 router.post("/submit/:token", submitExam)
+router.post("/proctoring-log/:token", logProctoringEvent)
 router.get("/interview-verify/:token", verifyInterviewToken)
 router.post("/candidate-joined-meet/:token", notifyCandidateJoinedMeet)
 

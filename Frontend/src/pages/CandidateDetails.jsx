@@ -29,7 +29,9 @@ import {
   Code2,
   ZoomIn,
   ZoomOut,
-  RotateCcw
+  RotateCcw,
+  ShieldAlert,
+  AlertTriangle
 } from "lucide-react"
 
 import InterviewModal from "../components/InterviewModal"
@@ -664,6 +666,58 @@ const CandidateDetails = () => {
                     <p className="leading-relaxed text-zinc-300 italic">
                       "{examData.aiFeedback}"
                     </p>
+                  </div>
+                )}
+
+                {/* PROCTORING INTEGRITY AUDIT CARD */}
+                {examData && (
+                  <div className="bg-[#141519] border border-amber-500/30 rounded-xl p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-amber-400" />
+                        <span className="text-xs font-mono font-bold uppercase text-amber-300">Anti-Cheat Proctoring Audit</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${ (examData.integrityScore ?? 100) >= 90 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : (examData.integrityScore ?? 100) >= 70 ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-rose-500/10 text-rose-400 border-rose-500/30"}`}>
+                        Trust Score: {examData.integrityScore ?? 100}%
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-mono">
+                      <div className="bg-[#1A1B20] border border-[#272930] p-1.5 rounded-lg">
+                        <span className="text-zinc-400 block">Tab Switches</span>
+                        <span className={`font-bold text-xs ${(examData.tabSwitchCount || 0) > 0 ? "text-rose-400" : "text-emerald-400"}`}>{examData.tabSwitchCount || 0}</span>
+                      </div>
+                      <div className="bg-[#1A1B20] border border-[#272930] p-1.5 rounded-lg">
+                        <span className="text-zinc-400 block">Paste Attempts</span>
+                        <span className={`font-bold text-xs ${(examData.pasteCount || 0) > 0 ? "text-amber-400" : "text-emerald-400"}`}>{examData.pasteCount || 0}</span>
+                      </div>
+                      <div className="bg-[#1A1B20] border border-[#272930] p-1.5 rounded-lg">
+                        <span className="text-zinc-400 block">Fullscreen Exits</span>
+                        <span className={`font-bold text-xs ${(examData.fullscreenExitCount || 0) > 0 ? "text-rose-400" : "text-emerald-400"}`}>{examData.fullscreenExitCount || 0}</span>
+                      </div>
+                    </div>
+
+                    {examData.proctoringLogs && examData.proctoringLogs.length > 0 ? (
+                      <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                        <span className="text-[10px] font-mono uppercase text-zinc-400 font-semibold block">Violation Log Timeline:</span>
+                        {examData.proctoringLogs.map((log, i) => (
+                          <div key={i} className="flex items-start justify-between bg-[#1A1B20] border border-[#272930] p-1.5 rounded text-[10px] text-zinc-300 gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0"></span>
+                              <span className="font-semibold text-rose-300">{log.eventType}</span>
+                              <span className="text-zinc-400 text-[9px] truncate max-w-[140px]">{log.details}</span>
+                            </div>
+                            <span className="text-[9px] font-mono text-zinc-500 shrink-0">
+                              {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[10px] font-mono text-emerald-400/80 bg-emerald-950/20 border border-emerald-500/20 rounded p-1.5 text-center">
+                        ✓ Clean Session — No anti-cheating violations detected during assessment.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -91,6 +91,29 @@ const examSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    integrityScore: {
+        type: Number,
+        default: 100
+    },
+    tabSwitchCount: {
+        type: Number,
+        default: 0
+    },
+    pasteCount: {
+        type: Number,
+        default: 0
+    },
+    fullscreenExitCount: {
+        type: Number,
+        default: 0
+    },
+    proctoringLogs: [
+        {
+            eventType: { type: String, required: true },
+            timestamp: { type: Date, default: Date.now },
+            details: { type: String, default: "" }
+        }
+    ],
     interviewStatus: {
         type: String,
         enum: ["none", "scheduled", "invited", "passed", "failed"],

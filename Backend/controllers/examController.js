@@ -860,3 +860,64 @@ export const sendOfferLetter = async (req, res) => {
     }
 }
 
+/**
+ * Log Anti-Cheating & Proctoring Event from Candidate Browser
+ */
+export const logProctoringEvent = async (req, res) => {
+    try {
+        const { token } = req.params
+        const { eventType, details } = req.body
+
+        if (!eventType) {
+            return res.status(400).json({ success: false, message: "eventType is required" })
+        }
+
+        const exam = await Exam.findOne({ token })
+        if (!exam) {
+            return res.status(404).json({ success: false, message: "Exam session not found" })
+        }
+
+        if (exam.status === "completed" || exam.status === "expired") {
+            return res.json({ success: true, message: "Exam session inactive" })
+        }
+
+        // Update counters
+        if (eventType === "TAB_SWITCH" || eventType === "WINDOW_BLUR") {
+            exam.tabSwitchCount = (exam.tabSwitchCount || 0) + 1
+        } else if (eventType === "PASTE_ATTEMPT") {
+            exam.pasteCount = (exam.pasteCount || 0) + 1
+        } else if (eventType === "EXIT_FULLSCREEN") {
+            exam.fullscreenExitCount = (exam.fullscreenExitCount || 0) + 1
+        }
+
+        // Push log entry
+        exam.proctoringLogs.push({
+            eventType,
+            timestamp: new Date(),
+            details: details || ""
+        })
+
+        // Recalculate integrity score (100 base)
+        const tabPenalty = (exam.tabSwitchCount || 0) * 10
+        const pastePenalty = (exam.pasteCount || 0) * 15
+        const fsPenalty = (exam.fullscreenExitCount || 0) * 15
+        const otherLogsCount = exam.proctoringLogs.filter(l => ["RIGHT_CLICK", "RESTRICTED_KEY", "COPY_ATTEMPT"].includes(l.eventType)).length
+        const otherPenalty = otherLogsCount * 5
+
+        const totalDeduction = tabPenalty + pastePenalty + fsPenalty + otherPenalty
+        exam.integrityScore = Math.max(0, 100 - totalDeduction)
+
+        await exam.save()
+
+        res.json({
+            success: true,
+            integrityScore: exam.integrityScore,
+            tabSwitchCount: exam.tabSwitchCount,
+            pasteCount: exam.pasteCount,
+            fullscreenExitCount: exam.fullscreenExitCount
+        })
+    } catch (error) {
+        console.error("Log proctoring event error:", error)
+        res.status(500).json({ success: false, message: "Error logging proctoring event" })
+    }
+}
