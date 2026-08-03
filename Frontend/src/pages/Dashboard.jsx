@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   CartesianGrid
 } from "recharts"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import {
   BarChart3,
   FileText,
