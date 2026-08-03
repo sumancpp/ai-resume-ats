@@ -18,7 +18,8 @@ import {
   Loader2,
   GraduationCap,
   ArrowRight,
-  Trash2
+  Trash2,
+  Mail
 } from "lucide-react"
 
 import { getBackendUrl } from "../utils/api"
@@ -772,7 +773,7 @@ const SearchResume = () => {
 
           {/* CANDIDATE RANKINGS SECTION */}
           <div className="space-y-8 pt-6">
-            <div className="flex items-center justify-between border-b border-[#23252E] pb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#23252E] pb-4">
               <h3 className="font-serif text-2xl text-white flex items-center gap-3">
                 <span>Candidate Rankings Dossier</span>
                 {resumes.length > 0 && (
@@ -781,6 +782,16 @@ const SearchResume = () => {
                   </span>
                 )}
               </h3>
+
+              {resumes.length > 0 && (
+                <button
+                  onClick={() => navigate("/dashboard", { state: { filterSearch: query.trim() } })}
+                  className="px-4 py-2 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold shadow-md transition flex items-center gap-2 cursor-pointer shrink-0"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Send Stage Mail to Matched Candidates ({resumes.length})</span>
+                </button>
+              )}
             </div>
 
             {searchLoading ? (

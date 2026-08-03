@@ -94,6 +94,54 @@ const detectRoleCategory = (skillsArray = [], fullText = "") => {
 }
 
 // =====================
+// STOP WORDS & WORD MATCHING UTILITIES
+// =====================
+const STOP_WORDS = new Set([
+    "with", "in", "for", "and", "or", "of", "to", "a", "an", "the",
+    "proficient", "experience", "skills", "developer", "engineer",
+    "working", "knowledge", "strong", "good", "etc", "looking", "candidate",
+    "role", "position", "having", "who", "has", "is", "are", "at", "by", "from",
+    "specialist", "analyst", "full", "stack", "general"
+])
+
+const checkKeywordMatch = (text, keyword) => {
+    if (!text || !keyword) return false
+    const normText = text.toLowerCase()
+    const normKey = keyword.toLowerCase().trim()
+
+    if (normKey === "c") {
+        const regex = /(?:^|[^a-zA-Z0-9_#+])c(?:$|[^a-zA-Z0-9_#+])/i
+        return regex.test(normText)
+    }
+
+    if (normKey === "c++" || normKey === "cpp") {
+        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c\+\+|cpp|cplusplus)(?:$|[^a-zA-Z0-9_#+])/i
+        return regex.test(normText)
+    }
+
+    if (normKey === "c#" || normKey === "csharp") {
+        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c#|csharp)(?:$|[^a-zA-Z0-9_#+])/i
+        return regex.test(normText)
+    }
+
+    const escaped = normKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const regex = new RegExp(`(?:^|[^a-zA-Z0-9_#+])${escaped}(?:$|[^a-zA-Z0-9_#+])`, "i")
+    return regex.test(normText)
+}
+
+const sanitizeResumeSkills = (resume) => {
+    if (!resume) return resume
+    const skillsArray = resume.skills || []
+    if (skillsArray.length === 0) return resume
+    const textToTest = `${resume.resumeText || ""} ${resume.summary || ""}`
+    if (textToTest.trim().length > 0) {
+        const sanitized = skillsArray.filter((skill) => checkKeywordMatch(textToTest, skill))
+        resume.skills = sanitized
+    }
+    return resume
+}
+
+// =====================
 // STORAGE CONFIG
 // =====================
 if (!fs.existsSync("uploads")) {
@@ -344,32 +392,8 @@ app.post(
                 const extractedSkills = []
                 const normalizedText = text.toLowerCase()
                 skills.forEach((skill) => {
-                    const normSkill = skill.toLowerCase()
-                    if (normSkill === "c") {
-                        const regex = /(?:^|[^a-zA-Z0-9_#+])c(?:$|[^a-zA-Z0-9_#+])/i
-                        if (regex.test(normalizedText)) {
-                            extractedSkills.push(skill)
-                        }
-                    } else if (normSkill === "c++") {
-                        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c\+\+|cpp|cplusplus)(?:$|[^a-zA-Z0-9_#+])/i
-                        if (regex.test(normalizedText)) {
-                            extractedSkills.push(skill)
-                        }
-                    } else if (normSkill === "c#") {
-                        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c#|csharp)(?:$|[^a-zA-Z0-9_#+])/i
-                        if (regex.test(normalizedText)) {
-                            extractedSkills.push(skill)
-                        }
-                    } else if (normSkill.length <= 3) {
-                        const escaped = normSkill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-                        const regex = new RegExp(`(?:^|[^a-zA-Z0-9_#+])${escaped}(?:$|[^a-zA-Z0-9_#+])`, "i")
-                        if (regex.test(normalizedText)) {
-                            extractedSkills.push(skill)
-                        }
-                    } else {
-                        if (normalizedText.includes(normSkill)) {
-                            extractedSkills.push(skill)
-                        }
+                    if (checkKeywordMatch(normalizedText, skill)) {
+                        extractedSkills.push(skill)
                     }
                 })
 
@@ -507,12 +531,19 @@ app.get("/search", protect, async (req, res) => {
             })
         }
 
-        const filteredResumes = userResumes.filter((resume) => {
-            const searchableText = normalizeText(
-                `${resume.name} ${resume.college} ${resume.skills.join(" ")} ${resume.resumeText} ${resume.summary} ${resume.roleCategory}`
-            )
-            return searchableText.includes(normalizedQuery)
-        })
+        const filteredResumes = userResumes
+            .map((r) => sanitizeResumeSkills(r))
+            .filter((resume) => {
+                if (!normalizedQuery) return true
+                return (
+                    checkKeywordMatch(resume.name || "", normalizedQuery) ||
+                    checkKeywordMatch(resume.college || "", normalizedQuery) ||
+                    checkKeywordMatch((resume.skills || []).join(" "), normalizedQuery) ||
+                    checkKeywordMatch(resume.resumeText || "", normalizedQuery) ||
+                    checkKeywordMatch(resume.summary || "", normalizedQuery) ||
+                    checkKeywordMatch(resume.roleCategory || "", normalizedQuery)
+                )
+            })
 
         res.json({
             success: true,
@@ -528,46 +559,6 @@ app.get("/search", protect, async (req, res) => {
         })
     }
 })
-
-// =====================
-// STOP WORDS & WORD MATCHING UTILITY
-// =====================
-const STOP_WORDS = new Set([
-    "with", "in", "for", "and", "or", "of", "to", "a", "an", "the",
-    "proficient", "experience", "skills", "developer", "engineer",
-    "working", "knowledge", "strong", "good", "etc", "looking", "candidate",
-    "role", "position", "having", "who", "has", "is", "are", "at", "by", "from",
-    "specialist", "analyst", "full", "stack", "general"
-])
-
-const checkKeywordMatch = (text, keyword) => {
-    if (!text || !keyword) return false
-    const normText = text.toLowerCase()
-    const normKey = keyword.toLowerCase().trim()
-
-    if (normKey === "c") {
-        const regex = /(?:^|[^a-zA-Z0-9_#+])c(?:$|[^a-zA-Z0-9_#+])/i
-        return regex.test(normText)
-    }
-
-    if (normKey === "c++" || normKey === "cpp") {
-        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c\+\+|cpp|cplusplus)(?:$|[^a-zA-Z0-9_#+])/i
-        return regex.test(normText)
-    }
-
-    if (normKey === "c#" || normKey === "csharp") {
-        const regex = /(?:^|[^a-zA-Z0-9_#+])(?:c#|csharp)(?:$|[^a-zA-Z0-9_#+])/i
-        return regex.test(normText)
-    }
-
-    if (normKey.length <= 3) {
-        const escaped = normKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-        const regex = new RegExp(`(?:^|[^a-zA-Z0-9_#+])${escaped}(?:$|[^a-zA-Z0-9_#+])`, "i")
-        return regex.test(normText)
-    }
-
-    return normText.includes(normKey)
-}
 
 // =====================
 // AI SEARCH (PRECISION SKILLS & ATS MATCHING ENGINE)
@@ -611,6 +602,7 @@ app.get("/ai-search", protect, async (req, res) => {
         const scoredResumes = []
 
         for (const resume of userResumes) {
+            sanitizeResumeSkills(resume)
             let score = 0
             let reasons = []
             let matchedKeywordsCount = 0

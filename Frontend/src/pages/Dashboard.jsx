@@ -60,9 +60,10 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 const Dashboard = () => {
+  const location = useLocation()
   const [resumes, setResumes] = useState([])
   const [loading, setLoading] = useState(true)
-  const [tableSearch, setTableSearch] = useState("")
+  const [tableSearch, setTableSearch] = useState(location.state?.filterSearch || "")
 
   // Candidate Selection State
   const [selectedIds, setSelectedIds] = useState([])
@@ -378,22 +379,19 @@ const Dashboard = () => {
       const token = localStorage.getItem("token") || localStorage.getItem("talent_ai_token")
       const backendUrl = getBackendUrl()
 
-      let sent = 0
-      for (const cand of targetCandidates) {
-        await axios.post(
-          `${backendUrl}/api/exams/interview-invite/${cand._id}`,
-          {
-            candidateEmail: cand.email,
-            customMeetUrl: interviewForm.customMeetUrl,
-            scheduledDate: interviewForm.scheduledDate,
-            scheduledTime: interviewForm.scheduledTime
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-        sent++
-      }
+      const resumeIds = targetCandidates.map((c) => c._id)
+      const res = await axios.post(
+        `${backendUrl}/api/exams/send-video-interview-batch`,
+        {
+          resumeIds,
+          customMeetUrl: interviewForm.customMeetUrl,
+          scheduledDate: interviewForm.scheduledDate,
+          scheduledTime: interviewForm.scheduledTime
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
 
-      toast.success(`Successfully sent video interview join link to ${sent} candidate(s)!`)
+      toast.success(res.data.message || `Successfully sent video interview join link to candidate(s)!`)
       setActiveModal(null)
       fetchDashboardData()
     } catch (err) {
@@ -425,7 +423,7 @@ const Dashboard = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      toast.success(res.data.message || "Offer letter sent successfully!")
+      toast.success(res.data.message || "Official offer letter PDF emailed successfully!")
       setActiveModal(null)
       fetchDashboardData()
     } catch (err) {
@@ -446,9 +444,9 @@ const Dashboard = () => {
   resumes?.forEach((r) => {
     if (Array.isArray(r.skills)) {
       r.skills.forEach((sk) => {
-        if (sk) {
-          const normSkill = sk.trim()
-          skillCounts[normSkill] = (skillCounts[normSkill] || 0) + 1
+        const cleanSk = sk.trim()
+        if (cleanSk) {
+          skillCounts[cleanSk] = (skillCounts[cleanSk] || 0) + 1
         }
       })
     }
@@ -460,13 +458,23 @@ const Dashboard = () => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8)
 
+  const checkWordMatch = (text, keyword) => {
+    if (!text || !keyword) return false
+    const normText = text.toLowerCase()
+    const normKey = keyword.toLowerCase().trim()
+    const escaped = normKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const regex = new RegExp(`(?:^|[^a-zA-Z0-9_#+])${escaped}(?:$|[^a-zA-Z0-9_#+])`, "i")
+    return regex.test(normText)
+  }
+
   const filteredResumes = resumes?.filter((r) => {
     if (!tableSearch) return true
-    const search = tableSearch.toLowerCase()
+    const search = tableSearch.toLowerCase().trim()
     return (
       (r.name && r.name.toLowerCase().includes(search)) ||
       (r.college && r.college.toLowerCase().includes(search)) ||
-      (r.skills && r.skills.some((s) => s.toLowerCase().includes(search)))
+      (r.skills && r.skills.some((s) => checkWordMatch(s, search))) ||
+      (r.roleCategory && r.roleCategory.toLowerCase().includes(search))
     )
   })
 

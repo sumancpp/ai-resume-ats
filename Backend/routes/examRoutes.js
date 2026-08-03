@@ -19,6 +19,7 @@ import {
     sendShortlistNotice,
     sendRound1Passed,
     sendOfferLetter,
+    sendVideoInterviewBatch,
     downloadOfferLetter,
     logProctoringEvent
 } from "../controllers/examController.js"
@@ -55,6 +56,7 @@ router.post("/generate-custom-questions", protect, generateCustomQuestions)
 router.post("/send-configured-exam", protect, sendConfiguredExam)
 router.post("/send-shortlist-notice", protect, sendShortlistNotice)
 router.post("/send-round1-passed", protect, sendRound1Passed)
+router.post("/send-video-interview-batch", protect, sendVideoInterviewBatch)
 router.post("/send-offer-letter", protect, sendOfferLetter)
 
 export default router
