@@ -23,6 +23,16 @@ import examRoutes from "./routes/examRoutes.js"
 import { protect } from "./middleware/authMiddleware.js"
 import { uploadFileToCloudinary } from "./config/cloudinary.js"
 
+// Validate critical environment variables
+const requiredEnvVars = ["MONGO_URI", "JWT_SECRET"]
+const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName])
+
+if (missingEnvVars.length > 0) {
+    console.error(`[CRITICAL ERROR] Missing required environment variables: ${missingEnvVars.join(", ")}`)
+    console.error("Please create a .env file based on .env.example and set these variables before running the application.")
+    process.exit(1)
+}
+
 connectDB()
 
 const app = express()

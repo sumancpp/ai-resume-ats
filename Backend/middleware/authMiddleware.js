@@ -15,9 +15,16 @@ export const protect = async (req, res, next) => {
 
     if (token) {
         try {
+            if (!process.env.JWT_SECRET) {
+                console.error("Auth Middleware Error: JWT_SECRET environment variable missing")
+                return res.status(500).json({
+                    success: false,
+                    message: "Server configuration error"
+                })
+            }
             const decoded = jwt.verify(
                 token,
-                process.env.JWT_SECRET || "talent_ai_jwt_secret_key_2026"
+                process.env.JWT_SECRET
             )
 
             req.user = await User.findById(decoded.id).select("-password")

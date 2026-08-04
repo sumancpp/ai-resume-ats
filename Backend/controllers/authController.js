@@ -8,9 +8,12 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 // Helper to generate JWT Token
 const generateToken = (id) => {
+    if (!process.env.JWT_SECRET) {
+        throw new Error("JWT_SECRET environment variable is missing!")
+    }
     return jwt.sign(
         { id },
-        process.env.JWT_SECRET || "talent_ai_jwt_secret_key_2026",
+        process.env.JWT_SECRET,
         { expiresIn: "30d" }
     )
 }
