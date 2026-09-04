@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment Variables
+.env
+.env.*
+*.env
+!.env.example
+Backend/.env
+Frontend/.env
+Frontend/.env.local
+
+# Uploads & Temporary storage
+uploads/
+Backend/uploads/*
+!Backend/uploads/.gitkeep
+temp/
+*.log
+
+# Build Outputs
+dist/
+dist-ssr/
+build/
+
+# Editor & OS Artifacts
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
